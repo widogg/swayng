@@ -907,6 +907,11 @@ void view_map(struct sway_view *view, struct wlr_surface *wlr_surface,
 	}
 
 	view->container->pending.decoration.border_radius = config->decoration.border_radius;
+	view->container->pending.decoration.dim = config->decoration.dim;
+	view->container->pending.decoration.dim_color_r = config->decoration.dim_color[0];
+	view->container->pending.decoration.dim_color_g = config->decoration.dim_color[1];
+	view->container->pending.decoration.dim_color_b = config->decoration.dim_color[2];
+	view->container->pending.decoration.dim_color_a = config->decoration.dim_color[3];
 
 	if (view->impl->wants_floating && view->impl->wants_floating(view)) {
 		view->container->pending.border = config->floating_border;
