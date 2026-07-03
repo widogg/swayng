@@ -31,6 +31,15 @@ enum sway_fullscreen_mode {
 	FULLSCREEN_GLOBAL,
 };
 
+enum sway_fullscreen_request_mode {
+	FULLSCREEN_REQUEST_DEFAULT,
+};
+
+enum sway_fullscreen_state {
+	FULLSCREEN_DISABLED,
+	FULLSCREEN_ENABLED,
+};
+
 struct sway_root;
 struct sway_output;
 struct sway_workspace;
@@ -45,6 +54,8 @@ struct sway_container_state {
 	double width, height;
 
 	enum sway_fullscreen_mode fullscreen_mode;
+	enum sway_fullscreen_state fullscreen_container;
+	enum sway_fullscreen_state fullscreen_application;
 
 	struct sway_workspace *workspace; // NULL when hidden in the scratchpad
 	struct sway_container *parent;    // NULL if container in root of workspace
@@ -59,6 +70,17 @@ struct sway_container_state {
 	bool border_bottom;
 	bool border_left;
 	bool border_right;
+	struct {
+		int border_radius;
+		bool shadow;
+		bool shadow_dynamic;
+		double shadow_size;
+		double shadow_blur;
+		double shadow_offset_x, shadow_offset_y;
+		float shadow_color_r, shadow_color_g, shadow_color_b, shadow_color_a;
+		bool dim;
+		float dim_color_r, dim_color_g, dim_color_b, dim_color_a;
+	} decoration;
 
 	// These are in layout coordinates.
 	double content_x, content_y;
@@ -73,7 +95,6 @@ struct sway_container {
 
 	struct {
 		struct wlr_scene_tree *tree;
-
 		struct wlr_scene_tree *border;
 		struct wlr_scene_tree *background;
 
@@ -83,12 +104,10 @@ struct sway_container {
 
 	struct {
 		struct wlr_scene_tree *tree;
+		struct wlr_scene_decoration *full;
+	} decoration;
 
-		struct wlr_scene_rect *top;
-		struct wlr_scene_rect *bottom;
-		struct wlr_scene_rect *left;
-		struct wlr_scene_rect *right;
-	} border;
+	struct wlr_scene_shadow *shadow;
 
 	struct wlr_scene_tree *content_tree;
 
@@ -126,6 +145,12 @@ struct sway_container {
 	// Used for doing the resize calculations
 	double child_total_width;
 	double child_total_height;
+
+	struct {
+		double x0, y0, w0, h0;
+		double xt, yt, wt, ht;
+		double w1, h1;
+	} animation;
 
 	// Indicates that the container is a scratchpad container.
 	// Both hidden and visible scratchpad containers have scratchpad=true.
@@ -254,6 +279,14 @@ void container_end_mouse_operation(struct sway_container *container);
 
 void container_set_fullscreen(struct sway_container *con,
 		enum sway_fullscreen_mode mode);
+
+void container_set_fullscreen_container(struct sway_container *con,
+		enum sway_fullscreen_state mode);
+
+void container_set_fullscreen_application(struct sway_container *con,
+		enum sway_fullscreen_state mode);
+
+void container_handle_fullscreen_request(struct sway_container *con, bool enable);
 
 /**
  * Convenience function.

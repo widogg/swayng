@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,10 +14,12 @@
 #include "sway/server.h"
 #include "sway/tree/container.h"
 #include "sway/tree/node.h"
+#include "sway/tree/root.h"
 #include "sway/tree/view.h"
 #include "sway/tree/workspace.h"
 #include "list.h"
 #include "log.h"
+#include "util.h"
 
 struct sway_transaction {
 	struct wl_event_source *timer;
@@ -308,7 +311,11 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 
 			arrange_title_bar(child, title_offset, -title_bar_height,
 				next_title_offset - title_offset, title_bar_height);
-			wlr_scene_node_set_enabled(&child->border.tree->node, activated);
+			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
+			wlr_scene_node_set_enabled(&child->content_tree->node, activated);
+			if (child->decoration.full) {
+				wlr_scene_node_set_enabled(&child->decoration.full->node, activated);
+			}
 			wlr_scene_node_set_enabled(&child->scene_tree->node, true);
 			wlr_scene_node_set_position(&child->scene_tree->node, 0, title_bar_height);
 			wlr_scene_node_reparent(&child->scene_tree->node, content);
@@ -338,7 +345,11 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			bool activated = child == active;
 
 			arrange_title_bar(child, 0, y - title_height, width, title_bar_height);
-			wlr_scene_node_set_enabled(&child->border.tree->node, activated);
+			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
+			wlr_scene_node_set_enabled(&child->content_tree->node, activated);
+			if (child->decoration.full) {
+				wlr_scene_node_set_enabled(&child->decoration.full->node, activated);
+			}
 			wlr_scene_node_set_enabled(&child->scene_tree->node, true);
 			wlr_scene_node_set_position(&child->scene_tree->node, 0, title_height);
 			wlr_scene_node_reparent(&child->scene_tree->node, content);
@@ -358,7 +369,7 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			struct sway_container *child = children->items[i];
 			int cheight = child->current.height;
 
-			wlr_scene_node_set_enabled(&child->border.tree->node, true);
+			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
 			wlr_scene_node_set_position(&child->scene_tree->node, 0, off);
 			wlr_scene_node_reparent(&child->scene_tree->node, content);
 			if (width > 0 && cheight > 0) {
@@ -374,7 +385,7 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			struct sway_container *child = children->items[i];
 			int cwidth = child->current.width;
 
-			wlr_scene_node_set_enabled(&child->border.tree->node, true);
+			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
 			wlr_scene_node_set_position(&child->scene_tree->node, off, 0);
 			wlr_scene_node_reparent(&child->scene_tree->node, content);
 			if (cwidth > 0 && height > 0) {
@@ -389,6 +400,108 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 	}
 }
 
+static void arrange_view(struct sway_container *con,
+		int width, int height, bool title_bar) {
+	double border_top = container_titlebar_height();
+	double border_width = con->current.border_thickness > 0 ?
+		MAX(1, con->current.border_thickness) : 0.0;
+
+	if (title_bar && con->current.border != B_NORMAL) {
+		wlr_scene_node_set_enabled(&con->title_bar.tree->node, false);
+	}
+
+	if (con->current.border == B_NORMAL) {
+		if (title_bar) {
+			arrange_title_bar(con, 0, 0, width, border_top);
+		} else {
+			border_top = 0;
+			// should be handled by the parent container
+		}
+		border_top += con->current.border_top ? border_width : 0.0;
+	} else if (con->current.border == B_PIXEL) {
+		container_update(con);
+		border_top = title_bar && con->current.border_top ? border_width : 0;
+	} else if (con->current.border == B_NONE) {
+		container_update(con);
+		border_top = 0;
+		border_width = 0;
+	} else if (con->current.border == B_CSD) {
+		border_top = 0;
+		border_width = 0;
+		con->decoration.full->title_bar = false;
+	} else {
+		sway_assert(false, "unreachable");
+	}
+
+	if (con->current.border != B_NORMAL) {
+		wlr_scene_decoration_set_title_bar(con->decoration.full, false, 0, 0);
+	}
+
+	double border_left = con->current.border_left ? border_width : 0;
+	wlr_scene_decoration_set_size(con->decoration.full, width, height);
+	wlr_scene_decoration_set_border_width(con->decoration.full, border_width);
+	wlr_scene_decoration_set_border_radius(con->decoration.full, con->view->using_csd ?
+		0.0 : con->pending.decoration.border_radius);
+
+	double shadow_offset[2] = {
+		con->pending.decoration.shadow_offset_x,
+		con->pending.decoration.shadow_offset_y,
+	};
+	wlr_scene_node_set_enabled(&con->shadow->node, false);
+	struct wlr_scene_decoration *decoration = con->decoration.full;
+	struct wlr_scene_shadow *shadow = con->shadow;
+	double sx, sy, sw, sh;
+	const double size = con->pending.decoration.shadow_size;
+	if (con->pending.decoration.shadow_dynamic) {
+		double w = 0.5 * root->width;
+		double h = 0.5 * root->height;
+		double ratio = root->width >= root->height ?
+			h / (h + 2 * size) :
+			w / (w + 2 * size);
+		double x = 0.5 * root->width - con->pending.x;
+		double y = 0.5 * root->height - con->pending.y;
+		double proj_x = 0.5 * root->width - x / ratio;
+		double proj_y = 0.5 * root->height - y / ratio;
+		sx = decoration->node.x + proj_x - con->pending.x;
+		sy = decoration->node.y + proj_y - con->pending.y;
+		sw = width / ratio;
+		sh = height / ratio;
+	} else {
+		sx = decoration->node.x + (shadow_offset[0] - size);
+		sy = decoration->node.y + (shadow_offset[1] - size);
+		sw = width + 2.0 * size;
+		sh = height + 2.0 * size;
+	}
+	wlr_scene_node_set_position(&shadow->node, sx, sy);
+
+	float shadow_color[4] = {
+		con->pending.decoration.shadow_color_r,
+		con->pending.decoration.shadow_color_g,
+		con->pending.decoration.shadow_color_b,
+		con->pending.decoration.shadow_color_a,
+	};
+	wlr_scene_shadow_set_properties(shadow, sw, sh,
+		con->pending.decoration.shadow, con->pending.decoration.shadow_dynamic,
+		con->pending.decoration.shadow_size,
+		con->pending.decoration.shadow_blur, shadow_offset, shadow_color);
+	wlr_scene_node_set_enabled(&con->decoration.full->node, true);
+
+	// make sure to reparent, it's possible that the client just came out of
+	// fullscreen mode where the parent of the surface is not the container
+	wlr_scene_node_reparent(&con->view->scene_tree->node, con->content_tree);
+	wlr_scene_node_set_position(&con->view->scene_tree->node,
+		border_left, border_top);
+
+	// the output handler for the view wants to detect events for the entire
+	// container so give it negative coordinates to move it back over the
+	// decorations
+	wlr_scene_node_set_position(&con->view->output_handler->node,
+		-border_left, -border_top);
+	wlr_scene_buffer_set_dest_size(con->view->output_handler, width, height);
+
+	wlr_scene_node_set_enabled(&shadow->node, shadow->enabled);
+}
+
 static void arrange_container(struct sway_container *con,
 		int width, int height, bool title_bar, int gaps) {
 	// this container might have previously been in the scratchpad,
@@ -396,69 +509,7 @@ static void arrange_container(struct sway_container *con,
 	wlr_scene_node_set_enabled(&con->scene_tree->node, true);
 
 	if (con->view) {
-		int border_top = container_titlebar_height();
-		int border_width = con->current.border_thickness;
-
-		if (title_bar && con->current.border != B_NORMAL) {
-			wlr_scene_node_set_enabled(&con->title_bar.tree->node, false);
-			wlr_scene_node_set_enabled(&con->border.top->node, true);
-		} else {
-			wlr_scene_node_set_enabled(&con->border.top->node, false);
-		}
-
-		if (con->current.border == B_NORMAL) {
-			if (title_bar) {
-				arrange_title_bar(con, 0, 0, width, border_top);
-			} else {
-				border_top = 0;
-				// should be handled by the parent container
-			}
-		} else if (con->current.border == B_PIXEL) {
-			container_update(con);
-			border_top = title_bar && con->current.border_top ? border_width : 0;
-		} else if (con->current.border == B_NONE) {
-			container_update(con);
-			border_top = 0;
-			border_width = 0;
-		} else if (con->current.border == B_CSD) {
-			border_top = 0;
-			border_width = 0;
-		} else {
-			sway_assert(false, "unreachable");
-		}
-
-		int border_bottom = con->current.border_bottom ? border_width : 0;
-		int border_left = con->current.border_left ? border_width : 0;
-		int border_right = con->current.border_right ? border_width : 0;
-		int vert_border_height = MAX(0, height - border_top - border_bottom);
-
-		wlr_scene_rect_set_size(con->border.top, width, border_top);
-		wlr_scene_rect_set_size(con->border.bottom, width, border_bottom);
-		wlr_scene_rect_set_size(con->border.left,
-			border_left, vert_border_height);
-		wlr_scene_rect_set_size(con->border.right,
-			border_right, vert_border_height);
-
-		wlr_scene_node_set_position(&con->border.top->node, 0, 0);
-		wlr_scene_node_set_position(&con->border.bottom->node,
-			0, height - border_bottom);
-		wlr_scene_node_set_position(&con->border.left->node,
-			0, border_top);
-		wlr_scene_node_set_position(&con->border.right->node,
-			width - border_right, border_top);
-
-		// make sure to reparent, it's possible that the client just came out of
-		// fullscreen mode where the parent of the surface is not the container
-		wlr_scene_node_reparent(&con->view->scene_tree->node, con->content_tree);
-		wlr_scene_node_set_position(&con->view->scene_tree->node,
-			border_left, border_top);
-
-		// the output handler for the view wants to detect events for the entire
-		// container so give it negative coordinates to move it back over the
-		// decorations
-		wlr_scene_node_set_position(&con->view->output_handler->node,
-			-border_left, -border_top);
-		wlr_scene_buffer_set_dest_size(con->view->output_handler, width, height);
+		arrange_view(con, width, height, title_bar);
 	} else {
 		// make sure to disable the title bar if the parent is not managing it
 		if (title_bar) {
@@ -498,6 +549,7 @@ static void arrange_fullscreen(struct wlr_scene_tree *tree,
 
 		// if we only care about the view, disable any decorations
 		wlr_scene_node_set_enabled(&fs->scene_tree->node, false);
+		wlr_scene_node_set_enabled(&fs->shadow->node, false);
 
 		// reconfigure the output handler (for foreign toplevel) to cover the
 		// view without container decorations
@@ -542,7 +594,7 @@ static void arrange_workspace_floating(struct sway_workspace *ws) {
 		wlr_scene_node_set_position(&floater->scene_tree->node,
 			floater->current.x, floater->current.y);
 		wlr_scene_node_set_enabled(&floater->scene_tree->node, true);
-		wlr_scene_node_set_enabled(&floater->border.tree->node, true);
+		wlr_scene_node_set_enabled(&floater->decoration.tree->node, true);
 
 		arrange_container(floater, floater->current.width, floater->current.height,
 			true, ws->gaps_inner);

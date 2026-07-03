@@ -24,6 +24,7 @@
 #include "pango.h"
 #include "log.h"
 #include "stringop.h"
+#include "util.h"
 
 static struct wlr_scene_rect *alloc_rect_node(struct wlr_scene_tree *parent,
 		bool *failed) {
@@ -43,6 +44,26 @@ static struct wlr_scene_rect *alloc_rect_node(struct wlr_scene_tree *parent,
 	return rect;
 }
 
+static struct wlr_scene_decoration *alloc_decoration_node(struct wlr_scene_tree *parent,
+		struct sway_view *view, bool *failed) {
+	if (*failed) {
+		return NULL;
+	}
+
+	// just pass in random values. These will be overwritten when
+	// they need to be used.
+	struct wlr_scene_decoration *decoration = wlr_scene_decoration_create(parent, view, 0, 0);
+	if (!decoration) {
+		sway_log(SWAY_ERROR, "Failed to allocate a wlr_scene_decoration");
+		*failed = true;
+	}
+	if (!*failed && !scene_descriptor_assign(&decoration->node,
+			SWAY_SCENE_DESC_NON_INTERACTIVE, (void *)1)) {
+		*failed = true;
+	}
+	return decoration;
+}
+
 struct sway_container *container_create(struct sway_view *view) {
 	struct sway_container *c = calloc(1, sizeof(struct sway_container));
 	if (!c) {
@@ -53,25 +74,25 @@ struct sway_container *container_create(struct sway_view *view) {
 
 	// Container tree structure
 	// - scene tree
-	//   - title bar
-	//     - border
-	//     - background
-	//     - title text
-	//     - marks text
-	//   - border
-	//     - border top/bottom/left/right
+	//   - decoration
+	//     - title bar
+	//       - title text
+	//       - marks text
+	//     - full
 	//     - content_tree (we put the content node here so when we disable the
-	//       border everything gets disabled. We only render the content iff there
-	//       is a border as well)
+	//       decoration everything gets disabled. We only render the content iff there
+	//       is a decoration as well)
 	//     - buffer used for output enter/leave events for foreign_toplevel
 	bool failed = false;
 	c->scene_tree = alloc_scene_tree(root->staging, &failed);
 
-	c->title_bar.tree = alloc_scene_tree(c->scene_tree, &failed);
+	c->decoration.tree = alloc_scene_tree(c->scene_tree, &failed);
+	c->title_bar.tree = alloc_scene_tree(c->decoration.tree, &failed);
 	c->title_bar.border = alloc_scene_tree(c->title_bar.tree, &failed);
 	c->title_bar.background = alloc_scene_tree(c->title_bar.tree, &failed);
+	c->content_tree = alloc_scene_tree(c->decoration.tree, &failed);
 
-	// for opacity purposes we need to carfully create the scene such that
+	// for opacity purposes we need to carefully create the scene such that
 	// none of our rect nodes as well as text buffers don't overlap. To do
 	// this we have to create rects such that they go around text buffers
 	for (int i = 0; i < 4; i++) {
@@ -82,15 +103,13 @@ struct sway_container *container_create(struct sway_view *view) {
 		alloc_rect_node(c->title_bar.background, &failed);
 	}
 
-	c->border.tree = alloc_scene_tree(c->scene_tree, &failed);
-	c->content_tree = alloc_scene_tree(c->border.tree, &failed);
-
 	if (view) {
-		// only containers with views can have borders
-		c->border.top = alloc_rect_node(c->border.tree, &failed);
-		c->border.bottom = alloc_rect_node(c->border.tree, &failed);
-		c->border.left = alloc_rect_node(c->border.tree, &failed);
-		c->border.right = alloc_rect_node(c->border.tree, &failed);
+		// only containers with views can have decorations
+		c->decoration.full = alloc_decoration_node(c->decoration.tree, view, &failed);
+		c->shadow = wlr_scene_shadow_create(c->decoration.tree, c->decoration.full);
+		wlr_scene_node_set_enabled(&c->shadow->node, false);
+		wlr_scene_node_lower_to_bottom(&c->shadow->node);
+		wlr_scene_node_raise_to_top(&c->title_bar.tree->node);
 	}
 
 	if (!failed && !scene_descriptor_assign(&c->scene_tree->node,
@@ -197,6 +216,41 @@ static void scene_rect_set_color(struct wlr_scene_rect *rect,
 	wlr_scene_rect_set_color(rect, premultiplied);
 }
 
+// scene border wants premultiplied colors
+static void scene_border_set_colors(struct wlr_scene_decoration *decoration,
+		const float top[4], const float bottom[4], const float left[4],
+		const float right[4], float opacity) {
+	if (!decoration->border) {
+		return;
+	}
+	const float pre_top[] = {
+		top[0] * top[3] * opacity,
+		top[1] * top[3] * opacity,
+		top[2] * top[3] * opacity,
+		top[3] * opacity,
+	};
+	const float pre_bottom[] = {
+		bottom[0] * bottom[3] * opacity,
+		bottom[1] * bottom[3] * opacity,
+		bottom[2] * bottom[3] * opacity,
+		bottom[3] * opacity,
+	};
+	const float pre_left[] = {
+		left[0] * left[3] * opacity,
+		left[1] * left[3] * opacity,
+		left[2] * left[3] * opacity,
+		left[3] * opacity,
+	};
+	const float pre_right[] = {
+		right[0] * right[3] * opacity,
+		right[1] * right[3] * opacity,
+		right[2] * right[3] * opacity,
+		right[3] * opacity,
+	};
+
+	wlr_scene_decoration_set_border_color(decoration, pre_top, pre_bottom, pre_left, pre_right);
+}
+
 void container_update(struct sway_container *con) {
 	struct border_colors *colors = container_get_current_colors(con);
 	list_t *siblings = NULL;
@@ -211,16 +265,24 @@ void container_update(struct sway_container *con) {
 		layout = con->current.workspace->current.layout;
 	}
 
-	float bottom[4], right[4];
-	memcpy(bottom, colors->child_border, sizeof(bottom));
-	memcpy(right, colors->child_border, sizeof(right));
+	const float transparent[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	float top[4], bottom[4], left[4], right[4];
+	memcpy(top, con->pending.border_top ? colors->child_border : transparent, sizeof(top));
+	memcpy(bottom, con->pending.border_bottom ? colors->child_border : transparent, sizeof(bottom));
+	memcpy(left, con->pending.border_left ? colors->child_border : transparent, sizeof(left));
+	memcpy(right, con->pending.border_right ? colors->child_border : transparent, sizeof(right));
 
 	if (!container_is_current_floating(con) && siblings && siblings->length == 1) {
 		if (layout == L_HORIZ) {
-			memcpy(right, colors->indicator, sizeof(right));
+			memcpy(right, con->pending.border_right ? colors->indicator : transparent, sizeof(right));
 		} else if (layout == L_VERT) {
-			memcpy(bottom, colors->indicator, sizeof(bottom));
+			memcpy(bottom, con->pending.border_bottom ? colors->indicator : transparent, sizeof(bottom));
 		}
+	}
+
+	// title bar background is drawn by title_bar rects, not the decoration
+	if (con->title_bar.tree->node.enabled) {
+		memcpy(top, transparent, sizeof(top));
 	}
 
 	struct wlr_scene_node *node;
@@ -234,11 +296,11 @@ void container_update(struct sway_container *con) {
 		scene_rect_set_color(rect, colors->background, alpha);
 	}
 
-	if (con->view) {
-		scene_rect_set_color(con->border.top, colors->child_border, alpha);
-		scene_rect_set_color(con->border.bottom, bottom, alpha);
-		scene_rect_set_color(con->border.left, colors->child_border, alpha);
-		scene_rect_set_color(con->border.right, right, alpha);
+	if (con->view && con->decoration.full) {
+		bool border = con->pending.border != B_NONE && con->pending.border_thickness > 0 &&
+			con->pending.border != B_CSD;
+		wlr_scene_decoration_set_border_enable(con->decoration.full, border);
+		scene_border_set_colors(con->decoration.full, top, bottom, left, right, alpha);
 	}
 
 	if (con->title_bar.title_text) {
@@ -343,7 +405,6 @@ void container_arrange_title_bar(struct sway_container *con) {
 			node->node->x, node->node->y, alloc_width, node->height);
 	}
 
-	// silence pixman errors
 	if (width <= 0 || height <= 0) {
 		pixman_region32_fini(&text_area);
 		return;
@@ -366,6 +427,10 @@ void container_arrange_title_bar(struct sway_container *con) {
 
 	update_rect_list(con->title_bar.border, &border);
 	pixman_region32_fini(&border);
+
+	if (con->decoration.full) {
+		wlr_scene_decoration_set_title_bar(con->decoration.full, false, 0, 0);
+	}
 
 	container_update(con);
 }
@@ -1188,7 +1253,7 @@ static void container_fullscreen_workspace(struct sway_container *con) {
 				"Expected a non-fullscreen container")) {
 		return;
 	}
-	set_fullscreen(con, true);
+
 	con->pending.fullscreen_mode = FULLSCREEN_WORKSPACE;
 
 	con->saved_x = con->pending.x;
@@ -1222,7 +1287,6 @@ static void container_fullscreen_global(struct sway_container *con) {
 				"Expected a non-fullscreen container")) {
 		return;
 	}
-	set_fullscreen(con, true);
 
 	root->fullscreen_global = con;
 	con->saved_x = con->pending.x;
@@ -1248,7 +1312,6 @@ void container_fullscreen_disable(struct sway_container *con) {
 				"Expected a fullscreen container")) {
 		return;
 	}
-	set_fullscreen(con, false);
 
 	if (container_is_floating(con)) {
 		con->pending.x = con->saved_x;
@@ -1323,6 +1386,46 @@ void container_set_fullscreen(struct sway_container *con,
 		}
 		container_fullscreen_global(con);
 		break;
+	}
+}
+
+void container_set_fullscreen_container(struct sway_container *con,
+		enum sway_fullscreen_state mode) {
+	con->pending.fullscreen_container = mode;
+}
+
+void container_set_fullscreen_application(struct sway_container *con,
+		enum sway_fullscreen_state mode) {
+	if (con->pending.fullscreen_application == mode) {
+		return;
+	}
+	switch (mode) {
+	case FULLSCREEN_DISABLED:
+		con->pending.fullscreen_application = mode;
+		set_fullscreen(con, false);
+		break;
+	case FULLSCREEN_ENABLED:
+		con->pending.fullscreen_application = mode;
+		set_fullscreen(con, true);
+		break;
+	}
+}
+
+void container_handle_fullscreen_request(struct sway_container *con, bool enable) {
+	if (con->pending.fullscreen_mode != FULLSCREEN_NONE ||
+			container_is_floating(con)) {
+		// Fall through to application fullscreen handling
+	}
+	if (enable) {
+		container_set_fullscreen_application(con, FULLSCREEN_ENABLED);
+		if (con->pending.fullscreen_mode == FULLSCREEN_NONE) {
+			container_set_fullscreen(con, enable);
+		}
+	} else {
+		container_set_fullscreen_application(con, FULLSCREEN_DISABLED);
+		if (con->pending.fullscreen_container != FULLSCREEN_ENABLED) {
+			container_set_fullscreen(con, enable);
+		}
 	}
 }
 
