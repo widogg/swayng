@@ -1,0 +1,25 @@
+# swayngmsg(1) completion
+
+complete -f -c swayngmsg
+complete -c swayngmsg -s h -l help --description "Show help message and quit."
+complete -c swayngmsg -s m -l monitor --description "Monitor subscribed events until killed."
+complete -c swayngmsg -s p -l pretty --description "Use pretty output even when not using a tty."
+complete -c swayngmsg -s q -l quiet --description "Sends the IPC message but does not print the response from swayng."
+complete -c swayngmsg -s r -l raw --description "Use raw output even if using tty."
+complete -c swayngmsg -s s -l socket -r --description "Use the specified socket path. Otherwise, swayngmsg will ask where the socket is (which is the value of $SWAYNGSOCK, then of $I3SOCK)."
+complete -c swayngmsg -s v -l version --description "Print the version (of swayngmsg) and quit."
+
+complete -c swayngmsg -s t -l type -fr --description "Specify the type of IPC message."
+complete -c swayngmsg -s t -l type -fra 'get_workspaces' --description "Gets a JSON-encoded list of workspaces and their status."
+complete -c swayngmsg -s t -l type -fra 'get_inputs' --description "Gets a JSON-encoded list of current inputs."
+complete -c swayngmsg -s t -l type -fra 'get_outputs' --description "Gets a JSON-encoded list of current outputs."
+complete -c swayngmsg -s t -l type -fra 'get_tree' --description "Gets a JSON-encoded layout tree of all open windows, containers, outputs, workspaces, and so on."
+complete -c swayngmsg -s t -l type -fra 'get_marks' --description "Get a JSON-encoded list of marks."
+complete -c swayngmsg -s t -l type -fra 'get_bar_config' --description "Get a JSON-encoded configuration for swayngbar."
+complete -c swayngmsg -s t -l type -fra 'get_version' --description "Get JSON-encoded version information for the running instance of swayng."
+complete -c swayngmsg -s t -l type -fra 'get_binding_modes' --description "Gets a JSON-encoded list of currently configured binding modes."
+complete -c swayngmsg -s t -l type -fra 'get_binding_state' --description "Get JSON-encoded info about the current binding state."
+complete -c swayngmsg -s t -l type -fra 'get_config' --description "Gets a JSON-encoded copy of the current configuration."
+complete -c swayngmsg -s t -l type -fra 'get_seats' --description "Gets a JSON-encoded list of all seats, its properties and all assigned devices."
+complete -c swayngmsg -s t -l type -fra 'send_tick' --description "Sends a tick event to all subscribed clients."
+complete -c swayngmsg -s t -l type -fra 'subscribe' --description "Subscribe to a list of event types."

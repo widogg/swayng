@@ -1,9 +1,9 @@
-#compdef sway
+#compdef swayng
 #------------
 # Description
 # -----------
 #
-# Completion script for the sway window manager (http://swaywm.org)
+# Completion script for the swayng window manager (http://swaywm.org)
 #
 # ---------------------------------------------
 # Author

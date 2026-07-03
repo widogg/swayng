@@ -312,7 +312,7 @@ static void pretty_print_output(json_object *o) {
 static void pretty_print_version(json_object *v) {
 	json_object *ver;
 	json_object_object_get_ex(v, "human_readable", &ver);
-	printf("sway version %s\n", json_object_get_string(ver));
+	printf("swayng version %s\n", json_object_get_string(ver));
 }
 
 static void pretty_print_config(json_object *c) {
@@ -462,7 +462,7 @@ int main(int argc, char **argv) {
 	};
 
 	const char *usage =
-		"Usage: swaymsg [options] [message]\n"
+		"Usage: swayngmsg [options] [message]\n"
 		"\n"
 		"  -h, --help             Show help message and quit.\n"
 		"  -m, --monitor          Monitor until killed (-t SUBSCRIBE only)\n"
@@ -502,7 +502,7 @@ int main(int argc, char **argv) {
 			cmdtype = strdup(optarg);
 			break;
 		case 'v':
-			printf("swaymsg version " SWAY_VERSION "\n");
+			printf("swayngmsg version " SWAY_VERSION "\n");
 			exit(EXIT_SUCCESS);
 			break;
 		default:

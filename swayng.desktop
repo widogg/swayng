@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=Sway
+Name=Swayng
 Comment=An i3-compatible Wayland compositor
-Exec=sway
+Exec=swayng
 Type=Application
-DesktopNames=sway;wlroots
+DesktopNames=swayng;wlroots

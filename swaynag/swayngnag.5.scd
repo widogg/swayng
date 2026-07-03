@@ -1,13 +1,13 @@
-swaynag(5)
+swayngnag(5)
 
 # NAME
 
-swaynag - swaynag configuration file
+swayngnag - swayngnag configuration file
 
 # SYNOPSIS
 
-$HOME/.swaynag/config, $XDG\_CONFIG\_HOME/swaynag/config,
-SYSCONFDIR/swaynag/config
+$HOME/.swayngnag/config, $XDG\_CONFIG\_HOME/swayngnag/config,
+SYSCONFDIR/swayngnag/config
 
 # CONFIG FILE
 
@@ -106,4 +106,4 @@ message-padding=10
 
 # SEE
 
-swaynag(1)
+swayngnag(1)

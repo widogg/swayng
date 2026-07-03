@@ -105,7 +105,7 @@ int swaynag_parse_options(int argc, char **argv, struct swaynag *swaynag,
 	};
 
 	const char *usage =
-		"Usage: swaynag [options...]\n"
+		"Usage: swayngnag [options...]\n"
 		"\n"
 		"  -b, --button <text> <action>  Create a button with text that "
 			"executes action in a terminal when pressed. Multiple buttons can "
@@ -113,7 +113,7 @@ int swaynag_parse_options(int argc, char **argv, struct swaynag *swaynag,
 		"  -B, --button-no-terminal <text> <action>  Like --button, but does"
 			"not run the action in a terminal.\n"
 		"  -z, --button-dismiss <text> <action>  Create a button with text that "
-			"dismisses swaynag, and executes action in a terminal when pressed. "
+			"dismisses swayngnag, and executes action in a terminal when pressed. "
 			"Multiple buttons can be defined.\n"
 		"  -Z, --button-dismiss-no-terminal <text> <action>  Like "
 			"--button-dismiss, but does not run the action in a terminal.\n"
@@ -275,7 +275,7 @@ int swaynag_parse_options(int argc, char **argv, struct swaynag *swaynag,
 			}
 			break;
 		case 'v': // Version
-			printf("swaynag version " SWAY_VERSION "\n");
+			printf("swayngnag version " SWAY_VERSION "\n");
 			return -1;
 		case TO_COLOR_BACKGROUND: // Background color
 			if (type && !parse_color(optarg, &type->background)) {
@@ -367,14 +367,14 @@ static bool file_exists(const char *path) {
 
 char *swaynag_get_config_path(void) {
 	static const char *config_paths[] = {
-		"$HOME/.swaynag/config",
-		"$XDG_CONFIG_HOME/swaynag/config",
-		SYSCONFDIR "/swaynag/config",
+		"$HOME/.swayngnag/config",
+		"$XDG_CONFIG_HOME/swayngnag/config",
+		SYSCONFDIR "/swayngnag/config",
 	};
 
 	char *config_home = getenv("XDG_CONFIG_HOME");
 	if (!config_home || config_home[0] == '\0') {
-		config_paths[1] = "$HOME/.config/swaynag/config";
+		config_paths[1] = "$HOME/.config/swayngnag/config";
 	}
 
 	wordexp_t p;
@@ -437,7 +437,7 @@ int swaynag_load_config(char *path, struct swaynag *swaynag, list_t *types) {
 				return EXIT_FAILURE;
 			}
 			snprintf(flag, nread + 3, "--%s", line);
-			char *argv[] = {"swaynag", flag};
+			char *argv[] = {"swayngnag", flag};
 			result = swaynag_parse_options(2, argv, swaynag, types, type,
 					NULL, NULL);
 			free(flag);

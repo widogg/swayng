@@ -27,15 +27,15 @@ int main(int argc, char **argv) {
 	};
 
 	const char *usage =
-		"Usage: swaybar [options...]\n"
+		"Usage: swayngbar [options...]\n"
 		"\n"
 		"  -h, --help             Show help message and quit.\n"
 		"  -v, --version          Show the version number and quit.\n"
-		"  -s, --socket <socket>  Connect to sway via socket.\n"
+		"  -s, --socket <socket>  Connect to swayng via socket.\n"
 		"  -b, --bar_id <id>      Bar ID for which to get the configuration.\n"
 		"  -d, --debug            Enable debugging.\n"
 		"\n"
-		" PLEASE NOTE that swaybar will be automatically started by sway as\n"
+		" PLEASE NOTE that swayngbar will be automatically started by swayng as\n"
 		" soon as there is a 'bar' configuration block in your config file.\n"
 		" You should never need to start it manually.\n";
 
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 			swaybar.id = strdup(optarg);
 			break;
 		case 'v':
-			printf("swaybar version " SWAY_VERSION "\n");
+			printf("swayngbar version " SWAY_VERSION "\n");
 			exit(EXIT_SUCCESS);
 			break;
 		case 'd': // Debug

@@ -1,14 +1,14 @@
-sway(5)
+swayng(5)
 
 # NAME
 
-sway - configuration file and commands
+swayng - configuration file and commands
 
 # DESCRIPTION
 
-A sway configuration file is a list of sway commands that are executed by sway
+A swayng configuration file is a list of swayng commands that are executed by swayng
 on startup.  These commands usually consist of setting your preferences and
-setting key bindings. An example config is likely present in /etc/sway/config
+setting key bindings. An example config is likely present in /etc/swayng/config
 for you to check out.
 
 Lines in the configuration file might be extended through multiple lines by
@@ -37,7 +37,7 @@ output eDP-1 background ~/wallpaper.png fill
 output eDP-1 resolution 1920x1080
 ```
 
-These commands can be executed in your config file, via *swaymsg*(1), or via
+These commands can be executed in your config file, via *swayngmsg*(1), or via
 the bindsym command.
 
 # COMMAND CONVENTIONS
@@ -55,13 +55,13 @@ which you may only select one. *[...]* is used for optional arguments, and
 # COMMANDS
 
 This section only lists general commands. For input and output commands, refer
-to *sway-input*(5) and *sway-output*(5).
+to *swayng-input*(5) and *swayng-output*(5).
 
 ## Config only commands
 The following commands may only be used in the configuration file.
 
 *bar* [<bar-id>] <bar-subcommands...>
-	For details on bar subcommands, see *sway-bar*(5).
+	For details on bar subcommands, see *swayng-bar*(5).
 
 *default_orientation* horizontal|vertical|auto
 	Sets the default container layout for tiled containers.
@@ -74,20 +74,20 @@ The following commands may only be used in the configuration file.
 
 *swaybg_command* <command>
 	Executes custom background _command_. Default is _swaybg_. Refer to
-	*sway-output*(5) for more information.
+	*swayng-output*(5) for more information.
 
 	It can be disabled by setting the command to a single dash:
 	_swaybg\_command -_
 
-*swaynag_command* <command>
+*swayngnag_command* <command>
 	Executes custom command for _swaynag_. Default is _swaynag_. Additional
 	arguments may be appended to the end. This should only be used to either
-	direct sway to call swaynag from a custom path or to provide additional
+	direct swayng to call swayngnag from a custom path or to provide additional
 	arguments. This should be placed at the top of the config for the best
 	results.
 
 	It can be disabled by setting the command to a single dash:
-	_swaynag\_command -_
+	_swayngnag\_command -_
 
 *workspace_layout* default|stacking|tabbed
 	Specifies the initial layout for new containers in an empty workspace.
@@ -101,7 +101,7 @@ The following commands may only be used in the configuration file.
 
 ## Runtime only commands
 The following commands cannot be used directly in the configuration file.
-They are expected to be used with *bindsym* or at runtime through *swaymsg*(1).
+They are expected to be used with *bindsym* or at runtime through *swayngmsg*(1).
 
 *border* none|normal|csd|pixel [<n>]
 	Set border style for focused window. _normal_ includes a border of
@@ -114,7 +114,7 @@ They are expected to be used with *bindsym* or at runtime through *swaymsg*(1).
 	Cycles through the available border styles.
 
 *exit*
-	Exit sway and end your Wayland session.
+	Exit swayng and end your Wayland session.
 
 *floating* enable|disable|toggle
 	Make focused window floating, non-floating, or the opposite of what it is now.
@@ -195,26 +195,26 @@ set|plus|minus|toggle <amount>
 
 *max_render_time* off|<msec>
 	Controls when the relevant application is told to render this window, as a
-	positive number of milliseconds before the next time sway composites the
+	positive number of milliseconds before the next time swayng composites the
 	output. A smaller number leads to fresher rendered frames being composited
-	by sway and lower perceived input latency, but if set too low, the
-	application may not finish rendering before sway composites the output,
+	by swayng and lower perceived input latency, but if set too low, the
+	application may not finish rendering before swayng composites the output,
 	leading to delayed frames.
 
 	When set to off, the relevant application is told to render this window
 	immediately after display refresh. How much time is left for rendering
-	before sway composites the output at that point depends on the output
+	before swayng composites the output at that point depends on the output
 	*max_render_time* setting.
 
 	To set this up for optimal latency:
-	. Set up *output max_render_time* (see *sway-output*(5)).
+	. Set up *output max_render_time* (see *swayng-output*(5)).
 	. Put the target application in _full-screen_ and have it continuously
 	  render something.
 	. Start by setting *max_render_time 1*. If the application drops
 	  frames, increment by *1*.
 
 	This setting only has an effect if a per-output *max_render_time* is in
-	effect on the output the window is currently on. See *sway-output*(5) for
+	effect on the output the window is currently on. See *swayng-output*(5) for
 	further details.
 
 *allow_tearing* yes|no
@@ -228,7 +228,7 @@ set|plus|minus|toggle <amount>
 	regardless of the tearing hints.
 
 	This setting only has an effect if tearing is allowed on the output through
-	the per-output *allow_tearing* setting. See *sway-output*(5) for further
+	the per-output *allow_tearing* setting. See *swayng-output*(5) for further
 	details.
 
 *move* left|right|up|down [<px> px]
@@ -299,9 +299,9 @@ set|plus|minus|toggle <amount>
 	1 (completely opaque). If the operation is omitted, _set_ will be used.
 
 *reload*
-	Reloads the sway config file and applies any changes. The config file is
+	Reloads the swayng config file and applies any changes. The config file is
 	located at path specified by the command line arguments when started,
-	otherwise according to the priority stated in *sway*(1).
+	otherwise according to the priority stated in *swayng*(1).
 
 *rename* workspace [<old_name>] to <new_name>
 	Rename either <old_name> or the focused workspace to the <new_name>
@@ -348,7 +348,7 @@ set|plus|minus|toggle <amount>
 	Criteria are particularly useful with the *for_window* command to
 	configure a class of windows differently from the per-seat defaults
 	established by the *seat* subcommand of the same name. See
-	*sway-input*(5) for more ways to affect inhibitors.
+	*swayng-input*(5) for more ways to affect inhibitors.
 
 *split* vertical|v|horizontal|h|none|n|toggle|t
 	Splits the current container, vertically or horizontally. When _none_ is
@@ -435,14 +435,14 @@ runtime.
 *bindsym* [--whole-window] [--border] [--exclude-titlebar] [--release] [--locked] \
 [--to-code] [--input-device=<device>] [--no-warn] [--no-repeat] [--inhibited] \
 [Group<1-4>+]<key combo> <command>
-	Binds _key combo_ to execute the sway command _command_ when pressed. You
+	Binds _key combo_ to execute the swayng command _command_ when pressed. You
 	may use XKB key names here (*wev*(1) is a good tool for discovering these).
 	With the flag _--release_, the command is executed when the key combo is
 	released. If _input-device_ is given, the binding will only be executed for
 	that input device and will be executed instead of any binding that is
 	generic to all devices. If a group number is given, then the binding will
 	only be available for that group. By default, if you overwrite a binding,
-	swaynag will give you a warning. To silence this, use the _--no-warn_ flag.
+	swayngnag will give you a warning. To silence this, use the _--no-warn_ flag.
 
 	For specifying modifier keys, you can use the XKB modifier names _Shift_,
 	_Lock_ (for Caps Lock), _Control_, _Mod1_ (for Alt), _Mod2_ (for Num Lock),
@@ -509,7 +509,7 @@ runtime.
 	is also available for binding with key/button codes instead of key/button names.
 
 *bindswitch* [--locked] [--no-warn] [--reload] <switch>:<state> <command>
-	Binds <switch> to execute the sway command _command_ on state changes.
+	Binds <switch> to execute the swayng command _command_ on state changes.
 	Supported switches are _lid_ (laptop lid), _tablet_ (tablet mode) and
 	_keypad_slide_ (whether the device keypad is exposed or not) switches. Valid
 	values for _state_ are _on_, _off_ and _toggle_. These switches are on when
@@ -527,7 +527,7 @@ runtime.
 	The _--locked_ flag will operate as normal so if the config is reloaded
 	while locked and _--locked_ is not given, the binding will not be executed.
 
-	By default, if you overwrite a binding, swaynag will give you a warning. To
+	By default, if you overwrite a binding, swayngnag will give you a warning. To
 	silence this, use the _--no-warn_ flag.
 
 	Example:
@@ -541,7 +541,7 @@ runtime.
 
 *bindgesture* [--exact] [--input-device=<device>] [--no-warn] \
 <gesture>[:<fingers>][:directions] <command>
-	Binds _gesture_ to execute the sway command _command_ when detected.
+	Binds _gesture_ to execute the swayng command _command_ when detected.
 	Currently supports the _hold_, _pinch_ or _swipe_ gesture. Optionally
 	can be limited to bind to a certain number of _fingers_ or, for a
 	_pinch_ or _swipe_ gesture, to certain _directions_.
@@ -568,7 +568,7 @@ runtime.
 	If a _input-device_ is given, the binding will only be executed for
 	that input device and will be executed instead of any binding that is
 	generic to all devices. By default, if you overwrite a binding,
-	swaynag will give you a warning. To silence this, use the _--no-warn_ flag.
+	swayngnag will give you a warning. To silence this, use the _--no-warn_ flag.
 
 	The _--exact_ flag can be used to ensure a binding only matches when exactly
 	all specified directions are matched and nothing more. If there is matching
@@ -578,8 +578,8 @@ runtime.
 	exact matches followed by matches with the highest number of matching
 	directions.
 
-	Gestures executed while the pointer is above a bar are not handled by sway.
-	See the respective documentation, e.g. *bindgesture* in *sway-bar*(5).
+	Gestures executed while the pointer is above a bar are not handled by swayng.
+	See the respective documentation, e.g. *bindgesture* in *swayng-bar*(5).
 
 	Example:
 ```
@@ -800,14 +800,14 @@ The default colors are:
 	_hide_edge_borders_ none.
 
 *input* <input_device> <input-subcommands...>
-	For details on input subcommands, see *sway-input*(5).
+	For details on input subcommands, see *swayng-input*(5).
 
 	\* may be used in lieu of a specific device name to configure all input
-	devices. A list of input device names may be obtained via *swaymsg -t
+	devices. A list of input device names may be obtained via *swayngmsg -t
 	get_inputs*.
 
 *seat* <seat> <seat-subcommands...>
-	For details on seat subcommands, see *sway-input*(5).
+	For details on seat subcommands, see *swayng-input*(5).
 
 *kill*
 	Kills (closes) the currently focused container and all of its children.
@@ -849,10 +849,10 @@ The default colors are:
 	they're created. This has no effect on the first window in a workspace.
 
 *output* <output_name> <output-subcommands...>
-	For details on output subcommands, see *sway-output*(5).
+	For details on output subcommands, see *swayng-output*(5).
 
 	\* may be used in lieu of a specific output name to configure all outputs.
-	A list of output names may be obtained via *swaymsg -t get_outputs*.
+	A list of output names may be obtained via *swayngmsg -t get_outputs*.
 
 *popup_during_fullscreen* smart|ignore|leave_fullscreen
 	Determines what to do when a fullscreen window opens a dialog.
@@ -1008,13 +1008,13 @@ Kill all windows where the title contains "Emacs":
 Several attributes allow regular expressions. These use Perl-compatible regular
 expressions (PCRE2), which are documented in *pcre2pattern*(3) and summarized in
 *pcre2syntax*(3). For example, this moves all windows with titles ending in
-"sway" or "Sway" to workspace 1:
+"swayng" or "Swayng" to workspace 1:
 
 ```
 [title="[Ss]way$"] move workspace 1
 ```
 
-You may like to use swaymsg -t get_tree for finding the values of these
+You may like to use swayngmsg -t get_tree for finding the values of these
 properties in practice for your applications.
 
 The following attributes may be matched with:
@@ -1112,5 +1112,5 @@ The following attributes may be matched with:
 
 # SEE ALSO
 
-*sway*(1) *sway-input*(5) *sway-output*(5) *sway-bar*(5) *sway-ipc*(7)
+*swayng*(1) *swayng-input*(5) *swayng-output*(5) *swayng-bar*(5) *swayng-ipc*(7)
 *pcre2pattern*(3) *pcre2syntax*(3)

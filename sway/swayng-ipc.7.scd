@@ -1,18 +1,18 @@
-sway-ipc(7)
+swayng-ipc(7)
 
 # NAME
 
-sway-ipc - IPC protocol for sway
+swayng-ipc - IPC protocol for sway
 
 # DESCRIPTION
 
-This details the interprocess communication (IPC) protocol for *sway*(1). This
-IPC protocol can be used to control or obtain information from a sway process.
+This details the interprocess communication (IPC) protocol for *swayng*(1). This
+IPC protocol can be used to control or obtain information from a swayng process.
 
 The IPC protocol uses a UNIX socket as the method of communication. The path
 to the socket is stored in the environment variable _SWAYSOCK_ and, for
 backwards compatibility with i3, _I3SOCK_. You can also retrieve the socket
-path by calling _sway --get-socketpath_.
+path by calling _swayng --get-socketpath_.
 
 # MESSAGE AND REPLY FORMAT
 
@@ -41,7 +41,7 @@ supported. *For all replies, any properties not listed are subject to removal.*
 :- *PURPOSE*
 |- 0
 :  RUN_COMMAND
-:[ Runs the payload as sway commands
+:[ Runs the payload as swayng commands
 |- 1
 :  GET_WORKSPACES
 :  Get the list of current workspaces
@@ -88,7 +88,7 @@ supported. *For all replies, any properties not listed are subject to removal.*
 ## 0. RUN_COMMAND
 
 *MESSAGE*++
-Parses and runs the payload as sway commands
+Parses and runs the payload as swayng commands
 
 *REPLY*++
 An array of objects corresponding to each command that was parsed. Each object
@@ -833,13 +833,13 @@ An array of bar IDs, which are strings
 
 *MESSAGE*++
 When sent with a bar ID as the payload, this retrieves the config associated
-with the bar ID specified in the payload. This is used by swaybar, but could
+with the bar ID specified in the payload. This is used by swayngbar, but could
 also be used for third-party bars
 
 *REPLY*++
 An object that represents the configuration for the bar with the bar ID sent as
 the payload. The following properties exist, with more information about their
-values in *sway-bar*(5):
+values in *swayng-bar*(5):
 
 [- *PROPERTY*
 :- *DATA TYPE*
@@ -1000,7 +1000,7 @@ containing the _#RRGGBBAA_ representation of the color:
 ## 7. GET_VERSION
 
 *MESSAGE*++
-Retrieve version information about the sway process
+Retrieve version information about the swayng process
 
 *REPLY*++
 An object containing the following properties:
@@ -1010,13 +1010,13 @@ An object containing the following properties:
 :- *DESCRIPTION*
 |- major
 :  integer
-:[ The major version of the sway process
+:[ The major version of the swayng process
 |- minor
 :  integer
-:  The minor version of the sway process
+:  The minor version of the swayng process
 |- patch
 :  integer
-:  The patch version of the sway process
+:  The patch version of the swayng process
 |- human_readable
 :  string
 :  A human readable version string that will likely contain more useful
@@ -1033,7 +1033,7 @@ An object containing the following properties:
 	"major": 1,
 	"minor": 0,
 	"patch": 0,
-	"loaded_config_file_name": "/home/redsoxfan/.config/sway/config"
+	"loaded_config_file_name": "/home/redsoxfan/.config/swayng/config"
 }
 ```
 
@@ -1092,7 +1092,7 @@ indicating whether the _TICK_ event was sent.
 
 *MESSAGE*++
 For i3 compatibility, this command will just return a failure object since it
-does not make sense to implement in sway due to the X11 nature of the command.
+does not make sense to implement in swayng due to the X11 nature of the command.
 If you are curious about what this IPC command does in i3, refer to the i3
 documentation.
 
@@ -1173,7 +1173,7 @@ The _libinput_ object describes the device configuration for libinput devices.
 Only properties that are supported for the device will be added to the object.
 In addition to the possible options listed, all string properties may also be
 _unknown_, in the case that a new option is added to libinput. See
-*sway-input*(5) for information on the meaning of the possible values. The
+*swayng-input*(5) for information on the meaning of the possible values. The
 following properties will be included for devices that support them:
 
 [- *PROPERTY*
@@ -1467,7 +1467,7 @@ one seat. Each object has the following properties:
 
 # EVENTS
 
-Events are a way for clients to get notified of changes to sway. A client can
+Events are a way for clients to get notified of changes to swayngng. A client can
 subscribe to any events it wants to be notified of changes for. The event is
 sent in the same format as a reply. The following events are currently
 available:
@@ -1497,7 +1497,7 @@ available:
 :  Sent when a configured binding is executed
 |- 0x80000006
 :  shutdown
-:  Sent when the ipc shuts down because sway is exiting
+:  Sent when the ipc shuts down because swayng is exiting
 |- 0x80000007
 :  tick
 :  Sent when an ipc client sends a _SEND\_TICK_ message
@@ -1793,7 +1793,7 @@ following properties:
 
 Sent whenever the IPC is shutting down. The event is a single object with the
 property _change_, which is a string containing the reason for the shutdown.
-Currently, the only value for _change_ is _exit_, which is issued when sway is
+Currently, the only value for _change_ is _exit_, which is issued when swayng is
 exiting.
 
 *Example Event:*
@@ -1906,4 +1906,4 @@ The following change types are currently available:
 
 # SEE ALSO
 
-*sway*(1) *sway*(5) *sway-bar*(5) *swaymsg*(1) *sway-input*(5) *sway-output*(5)
+*swayng*(1) *swayng*(5) *swayng-bar*(5) *swayngmsg*(1) *swayng-input*(5) *swayng-output*(5)

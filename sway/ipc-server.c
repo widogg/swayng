@@ -96,8 +96,8 @@ void ipc_init(struct sway_server *server) {
 	ipc_sockaddr = ipc_user_sockaddr();
 
 	// We want to use socket name set by user, not existing socket from another sway instance.
-	if (getenv("SWAYSOCK") != NULL && access(getenv("SWAYSOCK"), F_OK) == -1) {
-		strncpy(ipc_sockaddr->sun_path, getenv("SWAYSOCK"), sizeof(ipc_sockaddr->sun_path) - 1);
+	if (getenv("SWAYNGSOCK") != NULL && access(getenv("SWAYNGSOCK"), F_OK) == -1) {
+		strncpy(ipc_sockaddr->sun_path, getenv("SWAYNGSOCK"), sizeof(ipc_sockaddr->sun_path) - 1);
 		ipc_sockaddr->sun_path[sizeof(ipc_sockaddr->sun_path) - 1] = 0;
 	}
 
@@ -113,6 +113,7 @@ void ipc_init(struct sway_server *server) {
 	// Set i3 IPC socket path so that i3-msg works out of the box
 	setenv("I3SOCK", ipc_sockaddr->sun_path, 1);
 	setenv("SWAYSOCK", ipc_sockaddr->sun_path, 1);
+	setenv("SWAYNGSOCK", ipc_sockaddr->sun_path, 1);
 
 	ipc_client_list = create_list();
 
@@ -138,7 +139,7 @@ struct sockaddr_un *ipc_user_sockaddr(void) {
 		dir = "/tmp";
 	}
 	if (path_size <= snprintf(ipc_sockaddr->sun_path, path_size,
-			"%s/sway-ipc.%u.%i.sock", dir, getuid(), getpid())) {
+			"%s/swayng-ipc.%u.%i.sock", dir, getuid(), getpid())) {
 		sway_abort("Socket path won't fit into ipc_sockaddr->sun_path");
 	}
 
