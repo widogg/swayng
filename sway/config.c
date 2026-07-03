@@ -259,8 +259,10 @@ static void config_defaults(struct sway_config *config) {
 	config->xwayland = XWAYLAND_MODE_LAZY;
 
 	config->titlebar_border_thickness = 1;
+	config->titlebar_border_radius = 0;
 	config->titlebar_h_padding = 5;
 	config->titlebar_v_padding = 4;
+	config->decoration.border_radius = 0;
 
 	// floating view
 	config->floating_maximum_width = 0;

@@ -89,6 +89,7 @@ static const struct cmd_handler handlers[] = {
 	{ "tiling_drag", cmd_tiling_drag },
 	{ "tiling_drag_threshold", cmd_tiling_drag_threshold },
 	{ "title_align", cmd_title_align },
+	{ "titlebar_border_radius", cmd_titlebar_border_radius },
 	{ "titlebar_border_thickness", cmd_titlebar_border_thickness },
 	{ "titlebar_padding", cmd_titlebar_padding },
 	{ "unbindcode", cmd_unbindcode },
@@ -101,6 +102,8 @@ static const struct cmd_handler handlers[] = {
 
 /* Config-time only commands. Keep alphabetized */
 static const struct cmd_handler config_handlers[] = {
+	{ "decoration", cmd_decoration },
+	{ "default_decoration", cmd_default_decoration },
 	{ "default_orientation", cmd_default_orientation },
 	{ "include", cmd_include },
 	{ "primary_selection", cmd_primary_selection },

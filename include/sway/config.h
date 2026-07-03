@@ -522,6 +522,7 @@ struct sway_config {
 	int font_baseline;
 	bool pango_markup;
 	int titlebar_border_thickness;
+	int titlebar_border_radius;
 	int titlebar_h_padding;
 	int titlebar_v_padding;
 	size_t urgent_timeout;
@@ -582,6 +583,12 @@ struct sway_config {
 	} border_colors;
 
 	bool has_focused_tab_title;
+
+	struct {
+		int border_radius;
+		bool dim;
+		float dim_color[4];
+	} decoration;
 
 	// floating view
 	int32_t floating_maximum_width;
