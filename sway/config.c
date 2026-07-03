@@ -260,6 +260,11 @@ static void config_defaults(struct sway_config *config) {
 
 	config->titlebar_border_thickness = 1;
 	config->decoration.border_radius = 0;
+	config->decoration.dim = false;
+	config->decoration.dim_color[0] = 0.0f;
+	config->decoration.dim_color[1] = 0.0f;
+	config->decoration.dim_color[2] = 0.0f;
+	config->decoration.dim_color[3] = 0.10f;
 
 	// floating view
 	config->floating_maximum_width = 0;

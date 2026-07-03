@@ -315,6 +315,17 @@ void container_update(struct sway_container *con) {
 			con->pending.border != B_CSD;
 		wlr_scene_decoration_set_border_enable(con->decoration.full, border);
 		scene_border_set_colors(con->decoration.full, top, bottom, left, right, alpha);
+		if (con->pending.decoration.dim && !(con->current.focused || container_is_current_parent_focused(con))) {
+			float color[4] = {
+				con->pending.decoration.dim_color_r,
+				con->pending.decoration.dim_color_g,
+				con->pending.decoration.dim_color_b,
+				con->pending.decoration.dim_color_a
+			};
+			wlr_scene_decoration_set_dimming(con->decoration.full, con->pending.decoration.dim, color);
+		} else {
+			wlr_scene_decoration_set_dimming(con->decoration.full, false, transparent);
+		}
 	}
 
 	if (con->title_bar.title_text) {
