@@ -51,7 +51,7 @@ struct sway_node *node_at_coords(
 			continue;
 		}
 
-		scene_node = wlr_scene_node_at(&layer->node, lx, ly, sx, sy);
+		scene_node = wlr_scene_node_at(&layer->node, lx, ly, sx, sy, NULL);
 		if (scene_node) {
 			break;
 		}
