@@ -1,5 +1,5 @@
 lib_sway_client = static_library(
-	'sway-client',
+	'swayng-client',
 	files(
 		'pool-buffer.c',
 	),

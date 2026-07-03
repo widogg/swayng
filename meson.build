@@ -1,5 +1,5 @@
 project(
-	'sway',
+	'swayng',
 	'c',
 	version: '1.13-dev',
 	license: 'MIT',
@@ -119,20 +119,20 @@ if scdoc.found()
 	scdoc_prog = find_program(scdoc.get_variable(pkgconfig: 'scdoc'), native: true)
 	mandir = get_option('mandir')
 	man_files = [
-		'sway/sway.1.scd',
-		'sway/sway.5.scd',
-		'sway/sway-bar.5.scd',
-		'sway/sway-input.5.scd',
-		'sway/sway-ipc.7.scd',
-		'sway/sway-output.5.scd',
-		'swaybar/swaybar-protocol.7.scd',
-		'swaymsg/swaymsg.1.scd',
+		'sway/swayng.1.scd',
+		'sway/swayng.5.scd',
+		'sway/swayng-bar.5.scd',
+		'sway/swayng-input.5.scd',
+		'sway/swayng-ipc.7.scd',
+		'sway/swayng-output.5.scd',
+		'swaybar/swayngbar-protocol.7.scd',
+		'swaymsg/swayngmsg.1.scd',
 	]
 
-	if get_option('swaynag')
+	if get_option('swayngnag')
 		man_files += [
-			'swaynag/swaynag.1.scd',
-			'swaynag/swaynag.5.scd',
+			'swaynag/swayngnag.1.scd',
+			'swaynag/swayngnag.5.scd',
 		]
 	endif
 
@@ -196,13 +196,13 @@ subdir('common')
 subdir('sway')
 subdir('swaymsg')
 
-if get_option('swaybar') or get_option('swaynag')
+if get_option('swayngbar') or get_option('swayngnag')
 	subdir('client')
 endif
-if get_option('swaybar')
+if get_option('swayngbar')
 	subdir('swaybar')
 endif
-if get_option('swaynag')
+if get_option('swayngnag')
 	subdir('swaynag')
 endif
 
@@ -215,11 +215,11 @@ configure_file(
 	configuration: config,
 	input: 'config.in',
 	output: '@BASENAME@',
-	install_dir: join_paths(sysconfdir, 'sway')
+	install_dir: join_paths(sysconfdir, 'swayng')
 )
 
 install_data(
-	'sway.desktop',
+	'swayng.desktop',
 	install_dir: join_paths(datadir, 'wayland-sessions')
 )
 
@@ -234,7 +234,7 @@ if get_option('default-wallpaper')
 		'assets/Sway_Wallpaper_Blue_2048x1536.png',
 		'assets/Sway_Wallpaper_Blue_2048x1536_Portrait.png',
 	)
-	wallpaper_install_dir = join_paths(datadir, 'backgrounds', 'sway')
+	wallpaper_install_dir = join_paths(datadir, 'backgrounds', 'swayng')
 
 	install_data(wallpaper_files, install_dir: wallpaper_install_dir)
 endif

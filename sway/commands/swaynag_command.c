@@ -5,7 +5,7 @@
 
 struct cmd_results *cmd_swaynag_command(int argc, char **argv) {
 	struct cmd_results *error = NULL;
-	if ((error = checkarg(argc, "swaynag_command", EXPECTED_AT_LEAST, 1))) {
+	if ((error = checkarg(argc, "swayngnag_command", EXPECTED_AT_LEAST, 1))) {
 		return error;
 	}
 

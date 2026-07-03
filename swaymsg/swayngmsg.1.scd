@@ -1,12 +1,12 @@
-swaymsg(1)
+swayngmsg(1)
 
 # NAME
 
-swaymsg - Send messages to a running instance of sway over the IPC socket.
+swayngmsg - Send messages to a running instance of swayngng over the IPC socket.
 
 # SYNOPSIS
 
-_swaymsg_ [options...] [message]
+_swayngmsg_ [options...] [message]
 
 # OPTIONS
 
@@ -17,53 +17,53 @@ _swaymsg_ [options...] [message]
 	Monitor for responses until killed instead of exiting after the first
 	response. This can only be used with the IPC message type _subscribe_. If
 	there is a malformed response or an invalid event type was requested,
-	swaymsg will stop monitoring and exit.
+	swayngmsg will stop monitoring and exit.
 
 *-p, --pretty*
 	Use pretty output even when not using a tty.
 	Not available for all message types.
 
 *-q, --quiet*
-	Sends the IPC message but does not print the response from sway.
+	Sends the IPC message but does not print the response from swayng.
 
 *-r, --raw*
 	Use raw JSON output even if using a tty.
 
 *-s, --socket* <path>
-	Use the specified socket path. Otherwise, swaymsg will ask sway where the
+	Use the specified socket path. Otherwise, swayngmsg will ask swayng where the
 	socket is (which is the value of $SWAYSOCK, then of $I3SOCK).
 
 *-t, --type* <type>
 	Specify the type of IPC message. See below.
 
 *-v, --version*
-	Print the version (of swaymsg) and quit.
+	Print the version (of swayngmsg) and quit.
 
 # IPC MESSAGE TYPES
 
 *<command>*
-	The message is a sway command (the same commands you can bind to keybindings
-	in your sway config file). It will be executed immediately.
+	The message is a swayng command (the same commands you can bind to keybindings
+	in your swayng config file). It will be executed immediately.
 
-	See *sway*(5) for a list of commands.
+	See *swayng*(5) for a list of commands.
 
-	_swaymsg_ can return pretty printed (standalone-default) or JSON-formatted
+	_swayngmsg_ can return pretty printed (standalone-default) or JSON-formatted
 	(*--raw*) output. For detailed documentation on the returned JSON-data of
-	each message type listed below,	refer to *sway-ipc*(7). The JSON-format can
+	each message type listed below,	refer to *swayng-ipc*(7). The JSON-format can
 	contain more information than the pretty print.
 
 	Tips:
-	- Command expansion is performed twice: once by swaymsg, and again by sway.
+	- Command expansion is performed twice: once by swayngmsg, and again by swayng.
 	  If you have quoted multi-word strings in your command, enclose the entire
 	  command in single-quotes. For example, use
-	  _swaymsg 'output "Foobar Display" enable'_ instead of
-	  _swaymsg output "Foobar Display" enable_. Furthermore, note that comma
+	  _swayngmsg 'output "Foobar Display" enable'_ instead of
+	  _swayngmsg output "Foobar Display" enable_. Furthermore, note that comma
 	  separated options also count as multi-word strings, because commas can be
 	  used to execute commands on the same line.
 	- If you are providing a command that contains a leading hyphen (_-_), insert
-	  two hyphens (_--_) before the command to signal to swaymsg not to parse
+	  two hyphens (_--_) before the command to signal to swayngmsg not to parse
 	  anything beyond that point as an option. For example, use
-	  _swaymsg -- mark --add test_ instead of _swaymsg mark --add test_.
+	  _swayngmsg -- mark --add test_ instead of _swayngmsg mark --add test_.
 
 *get\_workspaces*
 	Gets a list of workspaces and their status.
@@ -86,10 +86,10 @@ _swaymsg_ [options...] [message]
 	Get a JSON-encoded list of marks.
 
 *get\_bar\_config*
-	Get a JSON-encoded configuration for swaybar.
+	Get a JSON-encoded configuration for swayngbar.
 
 *get\_version*
-	Get version information for the running instance of sway.
+	Get version information for the running instance of swayng.
 
 *get\_binding\_modes*
 	Gets a JSON-encoded list of currently configured binding modes.
@@ -108,7 +108,7 @@ _swaymsg_ [options...] [message]
 	provided in the form of a valid JSON array. If any of the types are invalid
 	or if a valid JSON array is not provided, this will result in a failure.
 	For a list of valid event types and the data returned with them refer to
-	*sway-ipc*(7).
+	*swayng-ipc*(7).
 
 # RETURN CODES
 
@@ -116,8 +116,8 @@ _swaymsg_ [options...] [message]
 	Success
 
 *1*
-	swaymsg errors such as invalid syntax, unable to connect to the ipc socket
-	or unable to parse sway's reply
+	swayngmsg errors such as invalid syntax, unable to connect to the ipc socket
+	or unable to parse swayng's reply
 
 *2*
 	Sway returned an error when processing the command (ex. invalid command,
@@ -125,4 +125,4 @@ _swaymsg_ [options...] [message]
 
 # SEE ALSO
 
-*sway*(5) *sway-bar*(5) *sway-input*(5) *sway-output*(5) *sway-ipc*(7)
+*swayng*(5) *swayng-bar*(5) *swayng-input*(5) *swayng-output*(5) *swayng-ipc*(7)
