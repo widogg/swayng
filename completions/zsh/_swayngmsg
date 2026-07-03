@@ -1,9 +1,9 @@
-#compdef swaymsg
+#compdef swayngmsg
 #-----------------
 # Description
 # -----------
 #
-# Completion script for swaymsg in sway wm (http://swaywm.org)
+# Completion script for swayngmsg in swayng (http://swaywm.org)
 #
 # ------------------------------------------------------
 # Author

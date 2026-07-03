@@ -17,7 +17,7 @@ static void nop() {
 }
 
 static bool terminal_execute(char *terminal, char *command) {
-	char fname[] = "/tmp/swaynagXXXXXX";
+	char fname[] = "/tmp/swayngnagXXXXXX";
 	FILE *tmp= fdopen(mkstemp(fname), "w");
 	if (!tmp) {
 		sway_log(SWAY_ERROR, "Failed to create temp script");
@@ -490,7 +490,7 @@ void swaynag_setup(struct swaynag *swaynag) {
 			swaynag->layer_shell, swaynag->surface,
 			swaynag->output ? swaynag->output->wl_output : NULL,
 			swaynag->type->layer,
-			"swaynag");
+			"swayngnag");
 	assert(swaynag->layer_surface);
 	zwlr_layer_surface_v1_add_listener(swaynag->layer_surface,
 			&layer_surface_listener, swaynag);
