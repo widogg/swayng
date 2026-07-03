@@ -613,7 +613,7 @@ static void handle_request_fullscreen(struct wl_listener *listener, void *data) 
 	if (xsurface->surface == NULL || !xsurface->surface->mapped) {
 		return;
 	}
-	container_set_fullscreen(view->container, xsurface->fullscreen);
+	container_handle_fullscreen_request(view->container, xsurface->fullscreen);
 
 	arrange_root();
 	transaction_commit_dirty();
