@@ -17,6 +17,8 @@
 #include "log.h"
 #include "util.h"
 
+extern const struct wlr_scene_callbacks swayng_scene_cbs;
+
 struct sway_root *root;
 
 struct sway_root *root_create(struct wl_display *wl_display) {
@@ -26,6 +28,7 @@ struct sway_root *root_create(struct wl_display *wl_display) {
 		return NULL;
 	}
 
+	wlr_scene_set_callbacks(&swayng_scene_cbs);
 	struct wlr_scene *root_scene = wlr_scene_create();
 	if (!root_scene) {
 		sway_log(SWAY_ERROR, "Unable to allocate root scene node");

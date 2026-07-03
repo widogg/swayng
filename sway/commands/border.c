@@ -28,6 +28,11 @@ static void set_border(struct sway_container *con,
 	if (con->view) {
 		con->view->using_csd = new_border == B_CSD;
 	}
+	bool border = con->pending.border != B_NONE && con->pending.border_thickness > 0 &&
+		con->pending.border != B_CSD;
+	if (con->decoration.full) {
+		wlr_scene_decoration_set_border_enable(con->decoration.full, border);
+	}
 }
 
 static void border_toggle(struct sway_container *con) {
