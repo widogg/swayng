@@ -97,6 +97,7 @@ struct sway_container {
 		struct wlr_scene_tree *tree;
 		struct wlr_scene_tree *border;
 		struct wlr_scene_tree *background;
+		struct wlr_scene_decoration *decoration;
 
 		struct sway_text_node *title_text;
 		struct sway_text_node *marks_text;
@@ -217,6 +218,9 @@ void container_update_representation(struct sway_container *container);
  * Return the height of a regular title bar.
  */
 size_t container_titlebar_height(void);
+size_t container_titlebar_h_padding(void);
+size_t container_titlebar_v_padding(void);
+size_t container_titlebar_max_radius(void);
 
 void floating_calculate_constraints(int *min_width, int *max_width,
 		int *min_height, int *max_height);

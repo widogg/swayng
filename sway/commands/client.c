@@ -18,8 +18,8 @@ static struct cmd_results *handle_command(int argc, char **argv, char *cmd_name,
 	}
 
 	if (argc > 3 && strcmp(cmd_name, "client.focused_tab_title") == 0) {
-		sway_log(SWAY_ERROR,
-				"Warning: indicator and child_border colors have no effect for %s",
+		sway_log(SWAY_DEBUG,
+				"indicator and child_border colors have no effect for %s",
 				cmd_name);
 	}
 

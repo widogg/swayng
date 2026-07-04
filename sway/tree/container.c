@@ -64,6 +64,11 @@ static struct wlr_scene_decoration *alloc_decoration_node(struct wlr_scene_tree 
 	return decoration;
 }
 
+static bool container_title_bar_uses_deco(struct sway_container *con);
+static double container_get_border_radius(struct sway_container *con);
+static void container_arrange_title_bar_deco(struct sway_container *con,
+		int width, int height);
+
 struct sway_container *container_create(struct sway_view *view) {
 	struct sway_container *c = calloc(1, sizeof(struct sway_container));
 	if (!c) {
@@ -106,9 +111,11 @@ struct sway_container *container_create(struct sway_view *view) {
 	if (view) {
 		// only containers with views can have decorations
 		c->decoration.full = alloc_decoration_node(c->decoration.tree, view, &failed);
+		c->title_bar.decoration = alloc_decoration_node(c->title_bar.tree, view, &failed);
 		c->shadow = wlr_scene_shadow_create(c->decoration.tree, c->decoration.full);
 		wlr_scene_node_set_enabled(&c->shadow->node, false);
 		wlr_scene_node_lower_to_bottom(&c->shadow->node);
+		wlr_scene_node_lower_to_bottom(&c->title_bar.decoration->node);
 		wlr_scene_node_raise_to_top(&c->title_bar.tree->node);
 	}
 
@@ -280,20 +287,27 @@ void container_update(struct sway_container *con) {
 		}
 	}
 
-	// title bar background is drawn by title_bar rects, not the decoration
+	// title bar fill is drawn by title_bar.decoration, not content decoration
 	if (con->title_bar.tree->node.enabled) {
 		memcpy(top, transparent, sizeof(top));
 	}
 
 	struct wlr_scene_node *node;
-	wl_list_for_each(node, &con->title_bar.border->children, link) {
-		struct wlr_scene_rect *rect = wlr_scene_rect_from_node(node);
-		scene_rect_set_color(rect, colors->border, alpha);
-	}
+	if (!container_title_bar_uses_deco(con)) {
+		wl_list_for_each(node, &con->title_bar.border->children, link) {
+			struct wlr_scene_rect *rect = wlr_scene_rect_from_node(node);
+			scene_rect_set_color(rect, colors->border, alpha);
+		}
 
-	wl_list_for_each(node, &con->title_bar.background->children, link) {
-		struct wlr_scene_rect *rect = wlr_scene_rect_from_node(node);
-		scene_rect_set_color(rect, colors->background, alpha);
+		wl_list_for_each(node, &con->title_bar.background->children, link) {
+			struct wlr_scene_rect *rect = wlr_scene_rect_from_node(node);
+			scene_rect_set_color(rect, colors->background, alpha);
+		}
+	} else {
+		wl_list_for_each(node, &con->title_bar.border->children, link) {
+			struct wlr_scene_rect *rect = wlr_scene_rect_from_node(node);
+			scene_rect_set_color(rect, colors->border, alpha);
+		}
 	}
 
 	if (con->view && con->decoration.full) {
@@ -311,6 +325,16 @@ void container_update(struct sway_container *con) {
 	if (con->title_bar.marks_text) {
 		sway_text_node_set_color(con->title_bar.marks_text, colors->text);
 		sway_text_node_set_background(con->title_bar.marks_text, colors->background);
+	}
+
+	if (con->title_bar.decoration) {
+		const float premultiplied[] = {
+			colors->background[0] * colors->background[3] * alpha,
+			colors->background[1] * colors->background[3] * alpha,
+			colors->background[2] * colors->background[3] * alpha,
+			colors->background[3] * alpha,
+		};
+		wlr_scene_decoration_set_title_bar_color(con->title_bar.decoration, premultiplied);
 	}
 }
 
@@ -360,15 +384,15 @@ void container_arrange_title_bar(struct sway_container *con) {
 
 		int h_padding;
 		if (title_align == ALIGN_RIGHT) {
-			h_padding = config->titlebar_h_padding;
+			h_padding = container_titlebar_h_padding();
 		} else {
-			h_padding = width - config->titlebar_h_padding - marks_buffer_width;
+			h_padding = width - container_titlebar_h_padding() - marks_buffer_width;
 		}
 
-		h_padding = MAX(h_padding, config->titlebar_h_padding);
+		h_padding = MAX(h_padding, (int)container_titlebar_h_padding());
 
 		int alloc_width = MIN((int)node->width,
-			width - h_padding - config->titlebar_h_padding);
+			width - h_padding - (int)container_titlebar_h_padding());
 		alloc_width = MAX(alloc_width, 0);
 
 		sway_text_node_set_max_width(node, alloc_width);
@@ -384,17 +408,17 @@ void container_arrange_title_bar(struct sway_container *con) {
 
 		int h_padding;
 		if (title_align == ALIGN_RIGHT) {
-			h_padding = width - config->titlebar_h_padding - node->width;
+			h_padding = width - container_titlebar_h_padding() - node->width;
 		} else if (title_align == ALIGN_CENTER) {
 			h_padding = ((int)width - marks_buffer_width - node->width) >> 1;
 		} else {
-			h_padding = config->titlebar_h_padding;
+			h_padding = container_titlebar_h_padding();
 		}
 
-		h_padding = MAX(h_padding, config->titlebar_h_padding);
+		h_padding = MAX(h_padding, (int)container_titlebar_h_padding());
 
 		int alloc_width = MIN((int) node->width,
-			width - h_padding - config->titlebar_h_padding);
+			width - h_padding - (int)container_titlebar_h_padding());
 		alloc_width = MAX(alloc_width, 0);
 
 		sway_text_node_set_max_width(node, alloc_width);
@@ -411,7 +435,6 @@ void container_arrange_title_bar(struct sway_container *con) {
 	}
 
 	pixman_region32_t background, border;
-
 	int thickness = config->titlebar_border_thickness;
 	pixman_region32_init_rect(&background,
 		thickness, thickness,
@@ -422,14 +445,23 @@ void container_arrange_title_bar(struct sway_container *con) {
 	pixman_region32_subtract(&background, &background, &text_area);
 	pixman_region32_fini(&text_area);
 
-	update_rect_list(con->title_bar.background, &background);
-	pixman_region32_fini(&background);
+	if (container_title_bar_uses_deco(con)) {
+		pixman_region32_t empty;
+		pixman_region32_init(&empty);
+		update_rect_list(con->title_bar.background, &empty);
+		pixman_region32_fini(&empty);
+		pixman_region32_fini(&background);
 
-	update_rect_list(con->title_bar.border, &border);
-	pixman_region32_fini(&border);
+		update_rect_list(con->title_bar.border, &border);
+		pixman_region32_fini(&border);
 
-	if (con->decoration.full) {
-		wlr_scene_decoration_set_title_bar(con->decoration.full, false, 0, 0);
+		container_arrange_title_bar_deco(con, width, height);
+	} else {
+		update_rect_list(con->title_bar.background, &background);
+		pixman_region32_fini(&background);
+
+		update_rect_list(con->title_bar.border, &border);
+		pixman_region32_fini(&border);
 	}
 
 	container_update(con);
@@ -837,8 +869,46 @@ void container_update_representation(struct sway_container *con) {
 	}
 }
 
+size_t container_titlebar_v_padding(void) {
+	return MAX(2, config->font_height / 3);
+}
+
+size_t container_titlebar_h_padding(void) {
+	return MAX(4, config->font_height / 2);
+}
+
 size_t container_titlebar_height(void) {
-	return config->font_height + config->titlebar_v_padding * 2;
+	return config->font_height + container_titlebar_v_padding() * 2;
+}
+
+size_t container_titlebar_max_radius(void) {
+	return container_titlebar_height() / 2;
+}
+
+static bool container_title_bar_uses_deco(struct sway_container *con) {
+	return con->view && con->decoration.full && con->pending.border != B_CSD;
+}
+
+static double container_get_border_radius(struct sway_container *con) {
+	if (!con->view || con->view->using_csd) {
+		return 0.0;
+	}
+	return con->pending.decoration.border_radius;
+}
+
+static void container_arrange_title_bar_deco(struct sway_container *con,
+		int width, int height) {
+	if (!con->title_bar.decoration || width <= 0 || height <= 0) {
+		return;
+	}
+
+	double radius = container_get_border_radius(con);
+	wlr_scene_decoration_set_size(con->title_bar.decoration, width, height);
+	wlr_scene_node_set_position(&con->title_bar.decoration->node, 0, 0);
+	wlr_scene_decoration_set_border_enable(con->title_bar.decoration, false);
+	wlr_scene_decoration_set_border_radius(con->title_bar.decoration, radius);
+	wlr_scene_decoration_set_title_bar(con->title_bar.decoration, true, height, radius);
+	wlr_scene_node_set_enabled(&con->title_bar.decoration->node, true);
 }
 
 void floating_calculate_constraints(int *min_width, int *max_width,

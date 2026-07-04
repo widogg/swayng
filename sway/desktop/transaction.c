@@ -433,15 +433,17 @@ static void arrange_view(struct sway_container *con,
 		sway_assert(false, "unreachable");
 	}
 
-	if (con->current.border != B_NORMAL) {
-		wlr_scene_decoration_set_title_bar(con->decoration.full, false, 0, 0);
-	}
-
 	double border_left = con->current.border_left ? border_width : 0;
+	double radius = con->view->using_csd ? 0.0 : con->pending.decoration.border_radius;
+
 	wlr_scene_decoration_set_size(con->decoration.full, width, height);
+	wlr_scene_node_set_position(&con->decoration.full->node, 0, 0);
 	wlr_scene_decoration_set_border_width(con->decoration.full, border_width);
-	wlr_scene_decoration_set_border_radius(con->decoration.full, con->view->using_csd ?
-		0.0 : con->pending.decoration.border_radius);
+	wlr_scene_decoration_set_border_radius(con->decoration.full, radius);
+
+	// square junction between title_bar.decoration and content borders
+	wlr_scene_decoration_set_title_bar(con->decoration.full,
+		con->title_bar.tree->node.enabled, 0, 0);
 
 	double shadow_offset[2] = {
 		con->pending.decoration.shadow_offset_x,

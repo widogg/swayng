@@ -193,7 +193,6 @@ sway_cmd cmd_title_align;
 sway_cmd cmd_title_format;
 sway_cmd cmd_titlebar_border_radius;
 sway_cmd cmd_titlebar_border_thickness;
-sway_cmd cmd_titlebar_padding;
 sway_cmd cmd_unbindcode;
 sway_cmd cmd_unbindswitch;
 sway_cmd cmd_unbindgesture;
