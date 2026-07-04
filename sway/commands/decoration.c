@@ -3,6 +3,13 @@
 #include "sway/config.h"
 #include "sway/tree/container.h"
 
+static struct cmd_results *validate_border_radius(int value) {
+	if (value < 0 || value > (int)container_titlebar_max_radius()) {
+		return cmd_results_new(CMD_FAILURE, "Invalid size specified");
+	}
+	return NULL;
+}
+
 struct cmd_results *cmd_decoration(int argc, char **argv) {
 	struct cmd_results *error = NULL;
 	if ((error = checkarg(argc, "decoration", EXPECTED_AT_LEAST, 2))) {
@@ -15,7 +22,13 @@ struct cmd_results *cmd_decoration(int argc, char **argv) {
 	int i = 0;
 	while (i < argc) {
 		if (strcmp(argv[i], "border_radius") == 0) {
-			container->pending.decoration.border_radius = atoi(argv[++i]); ++i;
+			int value = atoi(argv[++i]);
+			struct cmd_results *err = validate_border_radius(value);
+			if (err) {
+				return err;
+			}
+			container->pending.decoration.border_radius = value;
+			++i;
 		} else if (strcmp(argv[i], "dim") == 0) {
 			container->pending.decoration.dim = parse_boolean(argv[++i], true); ++i;
 		} else if (strcmp(argv[i], "dim_color") == 0 && (i + 1 < argc && argv[i + 1][0] == '#')) {
@@ -48,7 +61,13 @@ struct cmd_results *cmd_default_decoration(int argc, char **argv) {
 	int i = 0;
 	while (i < argc) {
 		if (strcmp(argv[i], "border_radius") == 0) {
-			config->decoration.border_radius = atoi(argv[++i]); ++i;
+			int value = atoi(argv[++i]);
+			struct cmd_results *err = validate_border_radius(value);
+			if (err) {
+				return err;
+			}
+			config->decoration.border_radius = value;
+			++i;
 		} else if (strcmp(argv[i], "dim") == 0) {
 			config->decoration.dim = parse_boolean(argv[++i], true); ++i;
 		} else if (strcmp(argv[i], "dim_color") == 0 && (i + 1 < argc && argv[i + 1][0] == '#')) {

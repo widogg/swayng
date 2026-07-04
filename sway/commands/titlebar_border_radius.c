@@ -3,6 +3,7 @@
 #include "sway/config.h"
 #include "sway/output.h"
 #include "sway/tree/arrange.h"
+#include "sway/tree/container.h"
 #include "log.h"
 
 struct cmd_results *cmd_titlebar_border_radius(int argc, char **argv) {
@@ -13,11 +14,12 @@ struct cmd_results *cmd_titlebar_border_radius(int argc, char **argv) {
 
 	char *inv;
 	int value = strtol(argv[0], &inv, 10);
-	if (*inv != '\0' || value < 0 || value > 2 * config->titlebar_v_padding) {
+	if (*inv != '\0' || value < 0 ||
+			value > (int)container_titlebar_max_radius()) {
 		return cmd_results_new(CMD_FAILURE, "Invalid size specified");
 	}
 
-	config->titlebar_border_radius = value;
+	config->decoration.border_radius = value;
 
 	for (int i = 0; i < root->outputs->length; ++i) {
 		struct sway_output *output = root->outputs->items[i];

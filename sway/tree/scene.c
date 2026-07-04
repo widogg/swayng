@@ -52,10 +52,24 @@ static bool scene_node_at(struct wlr_scene_node *node, double lx, double ly,
 			return false;
 		}
 	} else if (node->type == WLR_SCENE_NODE_DECORATION) {
-		struct wlr_scene_decoration *scene_decoration = wlr_scene_decoration_from_node(node);
-		struct sway_view *view = scene_decoration->view;
-		struct sway_container *con = view->container;
-		if (con) {
+		struct wlr_scene_decoration *deco = wlr_scene_decoration_from_node(node);
+		struct sway_view *view = deco->view;
+		struct sway_container *con = view ? view->container : NULL;
+		if (con && deco == con->title_bar.decoration) {
+			// sway title bar fill: keep input for tab focus / drag
+		} else if (con && deco == con->decoration.full) {
+			double bw = deco->border && deco->border_width > 0 ?
+				deco->border_width : 0;
+			double tb = deco->title_bar ? deco->title_bar_height : 0;
+			const double margin = 1.0;
+			bool on_border = rx <= bw + margin || ry <= tb + bw + margin ||
+				rx >= deco->width - bw - margin ||
+				ry >= deco->height - bw - margin;
+			bool dimmed = deco->dim && deco->dim_color[3] > 0.f;
+			if (!on_border && !dimmed) {
+				return false;
+			}
+		} else if (con) {
 			const double cx = rx + con->pending.x - con->pending.content_x;
 			const double cy = ry + con->pending.y - con->pending.content_y;
 			const double MARGIN = 1.0;
@@ -164,11 +178,15 @@ static double scene_view_content_scale(struct wlr_surface *surface) {
 
 static bool scene_layer_surface_data(struct wlr_layer_surface_v1 *layer_surface,
 		struct wlr_scene_layer_surface_data *data) {
-	(void)layer_surface;
 	data->x = data->y = 0.0;
-	data->width = 0.0;
-	data->height = 0.0;
-	return false;
+	if (layer_surface->surface->mapped) {
+		data->width = layer_surface->surface->current.width;
+		data->height = layer_surface->surface->current.height;
+	} else {
+		data->width = layer_surface->current.desired_width;
+		data->height = layer_surface->current.desired_height;
+	}
+	return true;
 }
 
 static void scene_animate(struct wlr_output *output) {
