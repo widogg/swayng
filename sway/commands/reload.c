@@ -101,6 +101,7 @@ static void do_reload(void *data) {
 
 	root_for_each_workspace(reload_sync_workspace_gaps, NULL);
 	root_for_each_container(reload_sync_container_border, NULL);
+	decoration_sync_containers();
 	root_for_each_container(title_bar_update_iterator, NULL);
 	view_icon_update_all();
 

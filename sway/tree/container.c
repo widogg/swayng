@@ -928,7 +928,8 @@ static void container_arrange_title_bar_deco(struct sway_container *con,
 		return;
 	}
 
-	double radius = container_get_border_radius(con);
+	double radius = MIN(container_get_border_radius(con),
+		(double)container_titlebar_max_radius());
 	wlr_scene_decoration_set_size(con->title_bar.decoration, width, height);
 	wlr_scene_node_set_position(&con->title_bar.decoration->node, 0, 0);
 	wlr_scene_decoration_set_border_enable(con->title_bar.decoration, false);

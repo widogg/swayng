@@ -1,13 +1,41 @@
 #include "util.h"
 #include "sway/commands.h"
 #include "sway/config.h"
+#include "sway/tree/arrange.h"
 #include "sway/tree/container.h"
+#include "sway/tree/root.h"
+
+#define MAX_BORDER_RADIUS 512
 
 static struct cmd_results *validate_border_radius(int value) {
-	if (value < 0 || value > (int)container_titlebar_max_radius()) {
+	if (value < 0 || value > MAX_BORDER_RADIUS) {
 		return cmd_results_new(CMD_FAILURE, "Invalid size specified");
 	}
 	return NULL;
+}
+
+static void sync_container_decoration(struct sway_container *con, void *data) {
+	(void)data;
+	if (!con->view) {
+		return;
+	}
+	con->pending.decoration.border_radius = config->decoration.border_radius;
+	con->pending.decoration.dim = config->decoration.dim;
+	con->pending.decoration.dim_color_r = config->decoration.dim_color[0];
+	con->pending.decoration.dim_color_g = config->decoration.dim_color[1];
+	con->pending.decoration.dim_color_b = config->decoration.dim_color[2];
+	con->pending.decoration.dim_color_a = config->decoration.dim_color[3];
+	container_update(con);
+	node_set_dirty(&con->node);
+}
+
+void decoration_sync_from_config(void) {
+	root_for_each_container(sync_container_decoration, NULL);
+	arrange_root();
+}
+
+void decoration_sync_containers(void) {
+	root_for_each_container(sync_container_decoration, NULL);
 }
 
 struct cmd_results *cmd_decoration(int argc, char **argv) {
@@ -80,6 +108,9 @@ struct cmd_results *cmd_default_decoration(int argc, char **argv) {
 				"Expected 'default_decoration [border_radius <n>] "
 				"[dim true|false] [dim_color #RRGGBBAA]'");
 		}
+	}
+	if (config->active) {
+		decoration_sync_from_config();
 	}
 	return cmd_results_new(CMD_SUCCESS, NULL);
 }
