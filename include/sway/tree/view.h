@@ -4,7 +4,9 @@
 #include <wlr/config.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_tearing_control_v1.h>
+#include <wlr/types/wlr_xdg_toplevel_icon_v1.h>
 #include "sway/config.h"
 #if WLR_HAS_XWAYLAND
 #include <wlr/xwayland.h>
@@ -126,6 +128,9 @@ struct sway_view {
 
 	enum sway_view_tearing_mode tearing_mode;
 	enum wp_tearing_control_v1_presentation_hint tearing_hint;
+
+	struct wlr_xdg_toplevel_icon_v1 *xdg_icon;
+	struct wlr_buffer *owned_icon_buffer;
 };
 
 struct sway_xdg_shell_view {
@@ -164,6 +169,7 @@ struct sway_xwayland_view {
 	struct wl_listener request_activate;
 	struct wl_listener set_title;
 	struct wl_listener set_class;
+	struct wl_listener set_icon;
 	struct wl_listener set_role;
 	struct wl_listener set_startup_id;
 	struct wl_listener set_window_type;

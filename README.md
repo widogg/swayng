@@ -34,6 +34,12 @@ like and care about. This is the list
 * Dim unfocused windowss
 * Fake Fullscreen
 
+### Additional swayng features
+
+* **Title bar icons** — application icon to the left of the title text (tabbed/stacked
+  title bars only). **Enabled by default**; disable with `title_window_icon off`.
+  See `title_window_icon` in `man 5 swayng`.
+
 ### Features _not_ ported
 
 This are things I don't mind having, so I didn't even bothered
@@ -94,7 +100,8 @@ Run these commands:
 ## Configuration
 
 If you already use i3 or sway, then copy your  config to `~/.config/swayng/config` and
-it'll work out of the box. Otherwise, copy the sample configuration file to
+it'll work out of the box. Title bar icons are on by default; add `title_window_icon off`
+if you don't want them. Otherwise, copy the sample configuration file to
 `~/.config/swayng/config`. It is usually located at `/etc/swayng/config`.
 Run `man 5 swayng` for information on the configuration.
 

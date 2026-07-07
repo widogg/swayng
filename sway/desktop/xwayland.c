@@ -19,6 +19,7 @@
 #include "sway/tree/container.h"
 #include "sway/server.h"
 #include "sway/tree/view.h"
+#include "sway/view_icon.h"
 #include "sway/tree/workspace.h"
 
 static const char *atom_map[ATOM_LAST] = {
@@ -474,6 +475,7 @@ static void handle_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&xwayland_view->request_activate.link);
 	wl_list_remove(&xwayland_view->set_title.link);
 	wl_list_remove(&xwayland_view->set_class.link);
+	wl_list_remove(&xwayland_view->set_icon.link);
 	wl_list_remove(&xwayland_view->set_role.link);
 	wl_list_remove(&xwayland_view->set_startup_id.link);
 	wl_list_remove(&xwayland_view->set_window_type.link);
@@ -482,6 +484,7 @@ static void handle_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&xwayland_view->associate.link);
 	wl_list_remove(&xwayland_view->dissociate.link);
 	wl_list_remove(&xwayland_view->override_redirect.link);
+	view_icon_release(view);
 	view_begin_destroy(&xwayland_view->view);
 }
 
@@ -544,6 +547,7 @@ static void handle_map(struct wl_listener *listener, void *data) {
 		wlr_scene_surface_create(&xwayland_view->view.image_capture_scene->tree, xsurface->surface);
 
 	transaction_commit_dirty();
+	view_icon_update(view);
 }
 
 static void handle_dissociate(struct wl_listener *listener, void *data);
@@ -692,6 +696,18 @@ static void handle_set_title(struct wl_listener *listener, void *data) {
 	transaction_commit_dirty();
 }
 
+static void handle_set_icon(struct wl_listener *listener, void *data) {
+	(void)data;
+	struct sway_xwayland_view *xwayland_view =
+		wl_container_of(listener, xwayland_view, set_icon);
+	struct sway_view *view = &xwayland_view->view;
+	struct wlr_xwayland_surface *xsurface = view->wlr_xwayland_surface;
+	if (xsurface->surface == NULL || !xsurface->surface->mapped) {
+		return;
+	}
+	view_icon_update(view);
+}
+
 static void handle_set_class(struct wl_listener *listener, void *data) {
 	struct sway_xwayland_view *xwayland_view =
 		wl_container_of(listener, xwayland_view, set_class);
@@ -701,6 +717,7 @@ static void handle_set_class(struct wl_listener *listener, void *data) {
 		return;
 	}
 	view_execute_criteria(view);
+	view_icon_update(view);
 	transaction_commit_dirty();
 }
 
@@ -844,6 +861,9 @@ struct sway_xwayland_view *create_xwayland_view(struct wlr_xwayland_surface *xsu
 
 	wl_signal_add(&xsurface->events.set_class, &xwayland_view->set_class);
 	xwayland_view->set_class.notify = handle_set_class;
+
+	wl_signal_add(&xsurface->events.set_icon, &xwayland_view->set_icon);
+	xwayland_view->set_icon.notify = handle_set_icon;
 
 	wl_signal_add(&xsurface->events.set_role, &xwayland_view->set_role);
 	xwayland_view->set_role.notify = handle_set_role;

@@ -16,6 +16,7 @@
 #include "sway/tree/arrange.h"
 #include "sway/tree/container.h"
 #include "sway/tree/view.h"
+#include "sway/view_icon.h"
 #include "sway/tree/workspace.h"
 #include "sway/xdg_decoration.h"
 
@@ -362,6 +363,7 @@ static void handle_set_app_id(struct wl_listener *listener, void *data) {
 		wl_container_of(listener, xdg_shell_view, set_app_id);
 	struct sway_view *view = &xdg_shell_view->view;
 	view_update_app_id(view);
+	view_icon_update(view);
 	view_execute_criteria(view);
 	transaction_commit_dirty();
 }
@@ -545,6 +547,7 @@ static void handle_destroy(struct wl_listener *listener, void *data) {
 	if (view->xdg_decoration) {
 		view->xdg_decoration->view = NULL;
 	}
+	view_icon_release(view);
 	view_begin_destroy(view);
 }
 
