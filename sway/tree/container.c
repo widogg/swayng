@@ -386,6 +386,12 @@ void container_arrange_title_bar(struct sway_container *con) {
 	int width = con->title_width;
 	int height = container_titlebar_height();
 
+	int icon_block = 0;
+	if (config->title_window_icon && con->title_bar.icon &&
+			con->title_bar.icon->node.enabled && con->title_bar.icon_width > 0) {
+		icon_block = con->title_bar.icon_width + config->title_window_icon_padding;
+	}
+
 	pixman_region32_t text_area;
 	pixman_region32_init(&text_area);
 
@@ -421,12 +427,12 @@ void container_arrange_title_bar(struct sway_container *con) {
 		if (title_align == ALIGN_RIGHT) {
 			h_padding = width - container_titlebar_h_padding() - node->width;
 		} else if (title_align == ALIGN_CENTER) {
-			h_padding = ((int)width - marks_buffer_width - node->width) >> 1;
+			h_padding = ((int)width - marks_buffer_width - node->width + icon_block) >> 1;
 		} else {
-			h_padding = container_titlebar_h_padding();
+			h_padding = container_titlebar_h_padding() + icon_block;
 		}
 
-		h_padding = MAX(h_padding, (int)container_titlebar_h_padding());
+		h_padding = MAX(h_padding, (int)container_titlebar_h_padding() + icon_block);
 
 		int alloc_width = MIN((int) node->width,
 			width - h_padding - (int)container_titlebar_h_padding());
@@ -438,6 +444,15 @@ void container_arrange_title_bar(struct sway_container *con) {
 
 		pixman_region32_union_rect(&text_area, &text_area,
 			node->node->x, node->node->y, alloc_width, node->height);
+	}
+
+	if (config->title_window_icon && con->title_bar.icon &&
+			con->title_bar.icon->node.enabled && con->title_bar.icon_width > 0) {
+		int x = container_titlebar_h_padding();
+		int y = (height - con->title_bar.icon_height) >> 1;
+		wlr_scene_node_set_position(&con->title_bar.icon->node, x, y);
+		pixman_region32_union_rect(&text_area, &text_area,
+			x, y, con->title_bar.icon_width, con->title_bar.icon_height);
 	}
 
 	if (width <= 0 || height <= 0) {

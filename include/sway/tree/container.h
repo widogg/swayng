@@ -99,6 +99,10 @@ struct sway_container {
 		struct wlr_scene_tree *background;
 		struct wlr_scene_decoration *decoration;
 
+		struct wlr_scene_buffer *icon;
+		int icon_width;
+		int icon_height;
+
 		struct sway_text_node *title_text;
 		struct sway_text_node *marks_text;
 	} title_bar;

@@ -543,6 +543,8 @@ struct sway_config {
 	bool validating;
 	bool auto_back_and_forth;
 	bool show_marks;
+	bool title_window_icon;
+	int title_window_icon_padding;
 	enum alignment title_align;
 	bool primary_selection;
 

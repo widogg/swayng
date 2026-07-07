@@ -51,6 +51,7 @@
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
+#include <wlr/types/wlr_xdg_toplevel_icon_v1.h>
 #include <wlr/types/wlr_xdg_toplevel_tag_v1.h>
 #include <xf86drm.h>
 #include "config.h"
@@ -64,6 +65,7 @@
 #include "sway/input/cursor.h"
 #include "sway/tree/root.h"
 #include "sway/tree/workspace.h"
+#include "sway/view_icon.h"
 
 #if WLR_HAS_XWAYLAND
 #include <wlr/xwayland/shell.h>
@@ -615,6 +617,17 @@ bool server_init(struct sway_server *server) {
 	wl_signal_add(&xdg_toplevel_tag_manager_v1->events.set_tag,
 		&server->xdg_toplevel_tag_manager_v1_set_tag);
 
+	server->xdg_toplevel_icon_manager_v1 =
+		wlr_xdg_toplevel_icon_manager_v1_create(server->wl_display, 1);
+	if (!server->xdg_toplevel_icon_manager_v1) {
+		sway_log(SWAY_ERROR, "Failed to create XDG toplevel icon manager");
+		return false;
+	}
+	server->xdg_toplevel_icon_manager_v1_set_icon.notify =
+		xdg_toplevel_icon_manager_v1_handle_set_icon;
+	wl_signal_add(&server->xdg_toplevel_icon_manager_v1->events.set_icon,
+		&server->xdg_toplevel_icon_manager_v1_set_icon);
+
 	struct wlr_cursor_shape_manager_v1 *cursor_shape_manager =
 		wlr_cursor_shape_manager_v1_create(server->wl_display, 2);
 	if (!cursor_shape_manager) {
@@ -736,6 +749,7 @@ void server_fini(struct sway_server *server) {
 	wl_list_remove(&server->xdg_activation_v1_request_activate.link);
 	wl_list_remove(&server->xdg_activation_v1_new_token.link);
 	wl_list_remove(&server->xdg_toplevel_tag_manager_v1_set_tag.link);
+	wl_list_remove(&server->xdg_toplevel_icon_manager_v1_set_icon.link);
 	wl_list_remove(&server->request_set_cursor_shape.link);
 	wl_list_remove(&server->new_foreign_toplevel_capture_request.link);
 	wl_list_remove(&server->workspace_manager_v1_commit.link);

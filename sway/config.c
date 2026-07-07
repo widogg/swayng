@@ -28,6 +28,7 @@
 #include "sway/tree/arrange.h"
 #include "sway/tree/root.h"
 #include "sway/tree/workspace.h"
+#include "sway/view_icon.h"
 #include "cairo_util.h"
 #include "pango.h"
 #include "stringop.h"
@@ -283,6 +284,8 @@ static void config_defaults(struct sway_config *config) {
 	config->auto_back_and_forth = false;
 	config->reading = false;
 	config->show_marks = true;
+	config->title_window_icon = true;
+	config->title_window_icon_padding = 0;
 	config->title_align = ALIGN_LEFT;
 	config->tiling_drag = true;
 	config->tiling_drag_threshold = 9;
@@ -956,6 +959,10 @@ void config_update_font_height(void) {
 	int prev_max_height = config->font_height;
 
 	get_text_metrics(config->font_description, &config->font_height, &config->font_baseline);
+
+	if (server.xdg_toplevel_icon_manager_v1) {
+		view_icon_update_manager_sizes(server.xdg_toplevel_icon_manager_v1);
+	}
 
 	if (config->font_height != prev_max_height) {
 		arrange_root();

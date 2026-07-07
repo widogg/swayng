@@ -33,6 +33,7 @@
 #include "sway/tree/arrange.h"
 #include "sway/tree/container.h"
 #include "sway/tree/view.h"
+#include "sway/view_icon.h"
 #include "sway/tree/workspace.h"
 #include "sway/config.h"
 #include "sway/xdg_decoration.h"
@@ -934,6 +935,7 @@ void view_map(struct sway_view *view, struct wlr_surface *wlr_surface,
 	}
 
 	view_update_title(view, false);
+	view_icon_update(view);
 	container_update_representation(container);
 
 	if (fullscreen) {

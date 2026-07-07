@@ -9,6 +9,7 @@
 #include "sway/tree/root.h"
 #include "sway/tree/view.h"
 #include "sway/tree/workspace.h"
+#include "sway/view_icon.h"
 #include "list.h"
 #include "log.h"
 
@@ -101,6 +102,7 @@ static void do_reload(void *data) {
 	root_for_each_workspace(reload_sync_workspace_gaps, NULL);
 	root_for_each_container(reload_sync_container_border, NULL);
 	root_for_each_container(title_bar_update_iterator, NULL);
+	view_icon_update_all();
 
 	arrange_root();
 }

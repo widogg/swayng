@@ -1,6 +1,7 @@
 #include <string.h>
 #include "sway/commands.h"
 #include "sway/config.h"
+#include "sway/view_icon.h"
 #include "log.h"
 #include "stringop.h"
 #include <pango/pangocairo.h>
@@ -44,6 +45,7 @@ struct cmd_results *cmd_font(int argc, char **argv) {
 
 	config->font_description = font_description;
 	config_update_font_height();
+	view_icon_update_all();
 
 	return cmd_results_new(CMD_SUCCESS, NULL);
 }
