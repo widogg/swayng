@@ -1,7 +1,6 @@
 #include <string.h>
 #include "sway/commands.h"
 #include "sway/config.h"
-#include "sway/output.h"
 #include "sway/tree/arrange.h"
 #include "sway/tree/container.h"
 #include "log.h"
@@ -14,22 +13,12 @@ struct cmd_results *cmd_titlebar_border_radius(int argc, char **argv) {
 
 	char *inv;
 	int value = strtol(argv[0], &inv, 10);
-	if (*inv != '\0' || value < 0 ||
-			value > (int)container_titlebar_max_radius()) {
+	if (*inv != '\0' || value < 0 || value > 512) {
 		return cmd_results_new(CMD_FAILURE, "Invalid size specified");
 	}
 
 	config->decoration.border_radius = value;
-
-	for (int i = 0; i < root->outputs->length; ++i) {
-		struct sway_output *output = root->outputs->items[i];
-		struct sway_workspace *ws = output_get_active_workspace(output);
-		if (!sway_assert(ws, "Expected output to have a workspace")) {
-			return cmd_results_new(CMD_FAILURE,
-					"Expected output to have a workspace");
-		}
-		arrange_workspace(ws);
-	}
+	decoration_sync_from_config();
 
 	return cmd_results_new(CMD_SUCCESS, NULL);
 }
