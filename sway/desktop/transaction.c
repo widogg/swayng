@@ -651,6 +651,7 @@ static void arrange_output(struct sway_output *output, int width, int height) {
 
 			wlr_scene_node_set_enabled(&output->layers.shell_background->node, !fs);
 			wlr_scene_node_set_enabled(&output->layers.shell_bottom->node, !fs);
+			wlr_scene_node_set_enabled(&output->layers.shell_top->node, !fs);
 			wlr_scene_node_set_enabled(&output->layers.fullscreen->node, fs);
 
 			if (fs) {

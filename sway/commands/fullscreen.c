@@ -63,18 +63,15 @@ struct cmd_results *cmd_fullscreen(int argc, char **argv) {
 
 	if (application) {
 		if (toggle) {
-			if (layout_fs && app_fs) {
-				container_set_fullscreen(container, FULLSCREEN_NONE);
-				container_set_fullscreen_container(container, FULLSCREEN_DISABLED);
+			if (app_fs) {
 				container_set_fullscreen_application(container, FULLSCREEN_DISABLED);
-				arrange_root();
-			} else if (!layout_fs && app_fs) {
-				container_set_fullscreen_application(container, FULLSCREEN_DISABLED);
-			} else if (!layout_fs && !app_fs) {
-				container_set_fullscreen_application(container, FULLSCREEN_ENABLED);
+				if (layout_fs) {
+					container_set_fullscreen(container, FULLSCREEN_NONE);
+					container_set_fullscreen_container(container, FULLSCREEN_DISABLED);
+					arrange_root();
+				}
 			} else {
-				container_set_fullscreen(container, FULLSCREEN_NONE);
-				container_set_fullscreen_container(container, FULLSCREEN_DISABLED);
+				container_set_fullscreen_application(container, FULLSCREEN_ENABLED);
 			}
 		} else {
 			container_set_fullscreen_application(container,
@@ -85,27 +82,19 @@ struct cmd_results *cmd_fullscreen(int argc, char **argv) {
 
 	enum sway_fullscreen_mode mode = FULLSCREEN_NONE;
 	if (toggle) {
-		if (layout_fs && app_fs) {
+		if (layout_fs) {
 			container_set_fullscreen(container, FULLSCREEN_NONE);
 			container_set_fullscreen_container(container, FULLSCREEN_DISABLED);
-			arrange_root();
-		} else if (!layout_fs && app_fs) {
-			mode = global ? FULLSCREEN_GLOBAL : FULLSCREEN_WORKSPACE;
-			container_set_fullscreen(container, mode);
-			container_set_fullscreen_container(container, FULLSCREEN_ENABLED);
-			container_set_fullscreen_application(container, FULLSCREEN_ENABLED);
-			arrange_root();
-		} else if (!layout_fs && !app_fs) {
-			mode = global ? FULLSCREEN_GLOBAL : FULLSCREEN_WORKSPACE;
-			container_set_fullscreen(container, mode);
-			container_set_fullscreen_container(container, FULLSCREEN_ENABLED);
-			container_set_fullscreen_application(container, FULLSCREEN_ENABLED);
-			arrange_root();
 		} else {
-			container_set_fullscreen(container, FULLSCREEN_NONE);
-			container_set_fullscreen_container(container, FULLSCREEN_DISABLED);
-			arrange_root();
+			mode = global ? FULLSCREEN_GLOBAL : FULLSCREEN_WORKSPACE;
+			container_set_fullscreen(container, mode);
+			container_set_fullscreen_container(container, FULLSCREEN_ENABLED);
+			// Maximize without telling the client; fake fullscreen stays tiled.
+			if (app_fs) {
+				container_set_fullscreen_application(container, FULLSCREEN_DISABLED);
+			}
 		}
+		arrange_root();
 	} else {
 		if (enable) {
 			mode = global ? FULLSCREEN_GLOBAL : FULLSCREEN_WORKSPACE;

@@ -1515,12 +1515,12 @@ void container_handle_fullscreen_request(struct sway_container *con, bool enable
 	if (enable) {
 		container_set_fullscreen_application(con, FULLSCREEN_ENABLED);
 		if (con->pending.fullscreen_mode == FULLSCREEN_NONE) {
-			container_set_fullscreen(con, enable);
+			container_set_fullscreen(con, FULLSCREEN_WORKSPACE);
 		}
 	} else {
 		container_set_fullscreen_application(con, FULLSCREEN_DISABLED);
 		if (con->pending.fullscreen_container != FULLSCREEN_ENABLED) {
-			container_set_fullscreen(con, enable);
+			container_set_fullscreen(con, FULLSCREEN_NONE);
 		}
 	}
 }
