@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <wlr/types/wlr_buffer.h>
+#include <wlr/render/color.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_toplevel_icon_v1.h>
 #include <wlr/util/log.h>
@@ -94,6 +95,19 @@ static struct wlr_scene_buffer *view_icon_ensure_scene(struct sway_container *co
 	return con->title_bar.icon;
 }
 
+static uint8_t view_icon_premul_channel(uint8_t color, uint8_t alpha) {
+	uint32_t z = (uint32_t)color * alpha + 0x80;
+	return (z + (z >> 8)) >> 8;
+}
+
+static void view_icon_write_pixel_bgra(uint8_t *dst, uint8_t r, uint8_t g,
+		uint8_t b, uint8_t a) {
+	dst[0] = view_icon_premul_channel(b, a);
+	dst[1] = view_icon_premul_channel(g, a);
+	dst[2] = view_icon_premul_channel(r, a);
+	dst[3] = a;
+}
+
 static struct wlr_buffer *view_icon_buffer_from_pixels(uint32_t *pixels,
 		uint32_t width, uint32_t height) {
 	size_t stride = width * 4;
@@ -122,6 +136,76 @@ static struct wlr_buffer *view_icon_buffer_from_cairo(cairo_surface_t *surface) 
 	}
 	return view_icon_buffer_from_pixels(
 		(uint32_t *)cairo_image_surface_get_data(surface), width, height);
+}
+
+static struct wlr_buffer *view_icon_buffer_from_wlr(struct wlr_buffer *src) {
+	void *data = NULL;
+	uint32_t format = 0;
+	size_t stride = 0;
+	if (!wlr_buffer_begin_data_ptr_access(src, WLR_BUFFER_DATA_PTR_ACCESS_READ,
+			&data, &format, &stride)) {
+		return NULL;
+	}
+
+	uint32_t width = src->width;
+	uint32_t height = src->height;
+	size_t out_stride = width * 4;
+	uint8_t *out = calloc(out_stride, height);
+	if (!out) {
+		wlr_buffer_end_data_ptr_access(src);
+		return NULL;
+	}
+
+	const uint8_t *src_bytes = data;
+	for (uint32_t y = 0; y < height; y++) {
+		const uint8_t *row = src_bytes + y * stride;
+		uint8_t *out_row = out + y * out_stride;
+		for (uint32_t x = 0; x < width; x++) {
+			const uint8_t *p = row + x * 4;
+			uint8_t *d = out_row + x * 4;
+			uint8_t r, g, b, a;
+			switch (format) {
+			case DRM_FORMAT_ARGB8888:
+				/* wl_shm ARGB8888 is B,G,R,A in memory */
+				b = p[0];
+				g = p[1];
+				r = p[2];
+				a = p[3];
+				d[0] = b;
+				d[1] = g;
+				d[2] = r;
+				d[3] = a;
+				break;
+			case DRM_FORMAT_ABGR8888:
+				/* R,G,B,A in memory */
+				r = p[0];
+				g = p[1];
+				b = p[2];
+				a = p[3];
+				view_icon_write_pixel_bgra(d, r, g, b, a);
+				break;
+			case DRM_FORMAT_XRGB8888:
+				b = p[0];
+				g = p[1];
+				r = p[2];
+				view_icon_write_pixel_bgra(d, r, g, b, 0xff);
+				break;
+			default:
+				free(out);
+				wlr_buffer_end_data_ptr_access(src);
+				return NULL;
+			}
+		}
+	}
+	wlr_buffer_end_data_ptr_access(src);
+
+	struct wlr_readonly_data_buffer *readonly = readonly_data_buffer_create(
+		DRM_FORMAT_ARGB8888, out_stride, width, height, out);
+	if (!readonly) {
+		free(out);
+		return NULL;
+	}
+	return &readonly->base;
 }
 
 static list_t *icon_themes = NULL;
@@ -260,10 +344,8 @@ static bool view_icon_try_path(const char *path, struct wlr_buffer **out) {
 			uint8_t g = row[x * channels + 1];
 			uint8_t b = row[x * channels + 2];
 			uint8_t a = has_alpha ? row[x * channels + 3] : 0xff;
-			dst[x * 4 + 0] = (r * a) / 0xff;
-			dst[x * 4 + 1] = (g * a) / 0xff;
-			dst[x * 4 + 2] = (b * a) / 0xff;
-			dst[x * 4 + 3] = a;
+			/* cairo ARGB32 is B,G,R,A in memory on little-endian */
+			view_icon_write_pixel_bgra(dst + x * 4, r, g, b, a);
 		}
 	}
 	g_object_unref(pixbuf);
@@ -324,9 +406,18 @@ static struct wlr_buffer *view_icon_pick_xdg_buffer(struct wlr_xdg_toplevel_icon
 	if (!best) {
 		return NULL;
 	}
-	*width = best->buffer->width;
-	*height = best->buffer->height;
-	return wlr_buffer_lock(best->buffer);
+	struct wlr_buffer *locked = wlr_buffer_lock(best->buffer);
+	if (!locked) {
+		return NULL;
+	}
+	struct wlr_buffer *normalized = view_icon_buffer_from_wlr(locked);
+	wlr_buffer_unlock(locked);
+	if (!normalized) {
+		return NULL;
+	}
+	*width = normalized->width;
+	*height = normalized->height;
+	return normalized;
 }
 
 #if WLR_HAS_XWAYLAND
@@ -382,14 +473,9 @@ static struct wlr_buffer *view_icon_buffer_from_xwayland(
 	}
 	for (uint64_t i = 0; i < best_len; i++) {
 		uint32_t pixel = data[i];
-		uint8_t a = (pixel >> 24) & 0xff;
-		uint8_t r = (pixel >> 16) & 0xff;
-		uint8_t g = (pixel >> 8) & 0xff;
-		uint8_t b = pixel & 0xff;
-		r = (r * a) / 0xff;
-		g = (g * a) / 0xff;
-		b = (b * a) / 0xff;
-		pixels[i] = ((uint32_t)a << 24) | (r << 16) | (g << 8) | b;
+		/* _NET_WM_ICON CARD32 is B,G,R,A on little-endian */
+		uint8_t *p = (uint8_t *)&pixel;
+		view_icon_write_pixel_bgra((uint8_t *)&pixels[i], p[2], p[1], p[0], p[3]);
 	}
 	xcb_ewmh_get_wm_icon_reply_wipe(&icon_reply);
 
@@ -426,6 +512,8 @@ static void view_icon_apply(struct sway_view *view, struct wlr_buffer *buffer,
 	}
 
 	wlr_scene_buffer_set_buffer(icon, buffer);
+	wlr_scene_buffer_set_transfer_function(icon,
+		WLR_COLOR_TRANSFER_FUNCTION_SRGB);
 
 	int target = view_icon_preferred_size();
 	int dest = MIN(target, MIN(width, height));
@@ -470,7 +558,9 @@ void view_icon_update(struct sway_view *view) {
 
 	if (view->xdg_icon) {
 		buffer = view_icon_pick_xdg_buffer(view->xdg_icon, &width, &height);
-		if (!buffer && view->xdg_icon->name) {
+		if (buffer) {
+			owned = true;
+		} else if (view->xdg_icon->name) {
 			buffer = view_icon_load_named(view->xdg_icon->name);
 			owned = buffer != NULL;
 			if (buffer) {
