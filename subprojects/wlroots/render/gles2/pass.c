@@ -224,7 +224,8 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 	push_gles2_debug(renderer);
 
 	setup_blending(!texture->has_alpha && alpha == 1.0 &&
-		options->radius_top == 0.0f && options->radius_bottom == 0.0f ?
+		(options->rounded_corners == 0 ||
+			(options->radius_top == 0.0f && options->radius_bottom == 0.0f)) ?
 		WLR_RENDER_BLEND_MODE_NONE : options->blend_mode);
 
 	glUseProgram(shader->program);
@@ -251,6 +252,11 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 	glUniform1i(shader->flip_y, options->flip_y ? 1 : 0);
 	glUniform1f(shader->radius_top, options->radius_top);
 	glUniform1f(shader->radius_bottom, options->radius_bottom);
+	glUniform4f(shader->corners,
+		options->rounded_corners & WLR_CORNER_TOP_LEFT ? 1.0f : 0.0f,
+		options->rounded_corners & WLR_CORNER_TOP_RIGHT ? 1.0f : 0.0f,
+		options->rounded_corners & WLR_CORNER_BOTTOM_LEFT ? 1.0f : 0.0f,
+		options->rounded_corners & WLR_CORNER_BOTTOM_RIGHT ? 1.0f : 0.0f);
 	set_proj_matrix(shader->proj, pass->projection_matrix, &dst_box);
 	set_tex_matrix(shader->tex_proj, options->transform, &src_fbox);
 
@@ -327,6 +333,11 @@ static void render_pass_add_decoration(struct wlr_render_pass *wlr_pass, const s
 	glUniform1i(renderer->shaders.decoration.dim, options->dim ? 1 : 0);
 	glUniform4f(renderer->shaders.decoration.dim_color, options->dim_color.r,
 		options->dim_color.g, options->dim_color.b, options->dim_color.a);
+	glUniform4f(renderer->shaders.decoration.corners,
+		options->rounded_corners & WLR_CORNER_TOP_LEFT ? 1.0f : 0.0f,
+		options->rounded_corners & WLR_CORNER_TOP_RIGHT ? 1.0f : 0.0f,
+		options->rounded_corners & WLR_CORNER_BOTTOM_LEFT ? 1.0f : 0.0f,
+		options->rounded_corners & WLR_CORNER_BOTTOM_RIGHT ? 1.0f : 0.0f);
 
 	render(&box, options->clip, renderer->shaders.decoration.pos_attrib);
 	pop_gles2_debug(renderer);

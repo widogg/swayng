@@ -836,7 +836,8 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 			},
 			.texture_transform = tex_transform,
 			.blend_mode = !texture->has_alpha && alpha == 1.0 &&
-				options->radius_top == 0.0f && options->radius_bottom == 0.0f ?
+				(options->rounded_corners == 0 ||
+					(options->radius_top == 0.0f && options->radius_bottom == 0.0f)) ?
 				WLR_RENDER_BLEND_MODE_NONE : options->blend_mode,
 		});
 	if (!pipe) {
@@ -877,6 +878,7 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 		.flip_y = options->flip_y,
 		.radius_top = options->radius_top,
 		.radius_bottom = options->radius_bottom,
+		.rounded_corners = options->rounded_corners,
 		.box = {
 			options->dst_box.x, options->dst_box.y, options->dst_box.width, options->dst_box.height,
 		},
@@ -993,6 +995,7 @@ static void render_pass_add_decoration(struct wlr_render_pass *wlr_pass,
 			.swap_xy = options->swap_xy,
 			.flip_x = options->flip_x,
 			.flip_y = options->flip_y,
+			.rounded_corners = options->rounded_corners,
 			.box = {
 				options->box.x, options->box.y, options->box.width, options->box.height,
 			},

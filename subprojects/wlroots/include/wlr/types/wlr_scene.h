@@ -69,6 +69,7 @@ struct wlr_scene_view_data {
 	double total_scale;
 	double wscale, hscale;
 	float radius_top, radius_bottom;
+	uint32_t rounded_corners; // enum wlr_corner bitmask
 };
 
 struct wlr_scene_layer_surface_data {
@@ -206,6 +207,7 @@ struct wlr_scene_decoration {
 	float title_bar_color[4];
 	bool border;
 	double border_radius;
+	uint32_t rounded_corners; // enum wlr_corner bitmask
 	double border_width;
 	float border_top_color[4], border_bottom_color[4], border_left_color[4], border_right_color[4];
 	bool dim;
@@ -301,6 +303,7 @@ struct wlr_scene_buffer {
 	// Radii of the two top and two bottom corners
 	float radius_top;
 	float radius_bottom;
+	uint32_t rounded_corners; // enum wlr_corner bitmask
 };
 
 /** A viewport for an output in the scene-graph */
@@ -603,6 +606,14 @@ void wlr_scene_decoration_set_border_color(struct wlr_scene_decoration *deco,
 void wlr_scene_decoration_set_border_radius(struct wlr_scene_decoration *deco, double radius);
 
 /**
+ * Select which corners of an existing decoration node are rounded
+ * (enum wlr_corner bitmask). Applies to both the border radius and the
+ * title bar radius.
+ */
+void wlr_scene_decoration_set_rounded_corners(struct wlr_scene_decoration *deco,
+	uint32_t corners);
+
+/**
  * Change the width of the border of an existing decoration node.
  */
 void wlr_scene_decoration_set_border_width(struct wlr_scene_decoration *deco, double width);
@@ -717,7 +728,7 @@ void wlr_scene_buffer_set_dest_size(struct wlr_scene_buffer *scene_buffer,
  * Sets the two top and two bottom radii for the buffer.
  */
 void wlr_scene_buffer_set_radius(struct wlr_scene_buffer *scene_buffer,
-	float radius_top, float radius_bottom);
+	float radius_top, float radius_bottom, uint32_t rounded_corners);
 
 /**
  * Set a transform which will be applied to the buffer.
@@ -923,5 +934,5 @@ struct wlr_scene_tree *wlr_scene_drag_icon_create(
  */
 void wlr_scene_surface_resize(struct wlr_scene_surface *scene_surface,
 		double total_scale, double anim_wscale, double anim_hscale,
-		float radius_top, float radius_bottom);
+		float radius_top, float radius_bottom, uint32_t rounded_corners);
 #endif

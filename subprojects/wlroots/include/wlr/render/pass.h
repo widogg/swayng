@@ -84,6 +84,20 @@ enum wlr_scale_filter_mode {
 	WLR_SCALE_FILTER_NEAREST,
 };
 
+/**
+ * Corners of a rendered box, used to select which corners get rounded.
+ */
+enum wlr_corner {
+	WLR_CORNER_TOP_LEFT = 1 << 0,
+	WLR_CORNER_TOP_RIGHT = 1 << 1,
+	WLR_CORNER_BOTTOM_LEFT = 1 << 2,
+	WLR_CORNER_BOTTOM_RIGHT = 1 << 3,
+};
+
+#define WLR_CORNERS_TOP (WLR_CORNER_TOP_LEFT | WLR_CORNER_TOP_RIGHT)
+#define WLR_CORNERS_BOTTOM (WLR_CORNER_BOTTOM_LEFT | WLR_CORNER_BOTTOM_RIGHT)
+#define WLR_CORNERS_ALL (WLR_CORNERS_TOP | WLR_CORNERS_BOTTOM)
+
 struct wlr_render_texture_options {
 	/* Output transformation */
 	bool swap_xy;
@@ -91,6 +105,8 @@ struct wlr_render_texture_options {
 	/* Radii for the top and bottom edge of the texture */
 	float radius_top;
 	float radius_bottom;
+	/* Which corners the radii apply to (enum wlr_corner bitmask) */
+	uint32_t rounded_corners;
 	/* Source texture */
 	struct wlr_texture *texture;
 	/* Source coordinates, leave empty to render the whole texture */
@@ -178,6 +194,9 @@ struct wlr_render_decoration_options {
 	bool border;
 	double border_radius;
 	double border_width;
+	/* Which corners border_radius/title_bar_border_radius apply to
+	 * (enum wlr_corner bitmask) */
+	uint32_t rounded_corners;
 	struct wlr_render_color border_top_color, border_bottom_color, border_left_color, border_right_color;
 	bool title_bar;
 	double title_bar_height;

@@ -285,7 +285,7 @@ static void scene_surface_get_sizes(struct wlr_scene_surface *scene_surface, str
 
 void wlr_scene_surface_resize(struct wlr_scene_surface *scene_surface,
 		double total_scale, double anim_wscale, double anim_hscale,
-		float radius_top, float radius_bottom) {
+		float radius_top, float radius_bottom, uint32_t rounded_corners) {
 	struct wlr_scene_buffer *scene_buffer = scene_surface->buffer;
 
 	struct wlr_fbox src_box;
@@ -306,7 +306,7 @@ void wlr_scene_surface_resize(struct wlr_scene_surface *scene_surface,
 	wlr_scene_buffer_set_source_box(scene_buffer, &src_box);
 	wlr_scene_buffer_set_dest_size(scene_buffer, MAX(1, dst_width),
 		MAX(1, dst_height));
-	wlr_scene_buffer_set_radius(scene_buffer, radius_top, radius_bottom);
+	wlr_scene_buffer_set_radius(scene_buffer, radius_top, radius_bottom, rounded_corners);
 	pixman_region32_fini(&opaque);
 }
 
@@ -366,7 +366,8 @@ static void surface_reconfigure(struct wlr_scene_surface *scene_surface) {
 	wlr_scene_buffer_set_source_box(scene_buffer, &src_box);
 	wlr_scene_buffer_set_dest_size(scene_buffer, MAX(1, dst_width),
 		MAX(1, dst_height));
-	wlr_scene_buffer_set_radius(scene_buffer, view_data.radius_top, view_data.radius_bottom);
+	wlr_scene_buffer_set_radius(scene_buffer, view_data.radius_top,
+		view_data.radius_bottom, view_data.rounded_corners);
 	wlr_scene_buffer_set_transform(scene_buffer, state->transform);
 	wlr_scene_buffer_set_opacity(scene_buffer, opacity);
 	wlr_scene_buffer_set_transfer_function(scene_buffer, tf);

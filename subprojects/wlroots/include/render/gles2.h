@@ -41,6 +41,7 @@ struct wlr_gles2_tex_shader {
 	GLint flip_y;
 	GLint radius_top;
 	GLint radius_bottom;
+	GLint corners;
 };
 
 struct wlr_gles2_renderer {
@@ -106,6 +107,7 @@ struct wlr_gles2_renderer {
 			GLint border_right;
 			GLint title_bar_color;
 			GLint dim_color;
+			GLint corners;
 			GLint pos_attrib;
 		} decoration;
 		struct {

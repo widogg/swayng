@@ -17,6 +17,7 @@ uniform vec4 border_left;
 uniform vec4 border_right;
 uniform vec4 title_bar_color;
 uniform vec4 dim_color;
+uniform vec4 corners; // rounded corner mask: tl, tr, bl, br
 
 vec4 antialias(float x, float x0, float x1, float fw, vec4 color) {
     float xmax = max(x1, x + fw);
@@ -67,28 +68,43 @@ void main() {
         title_height = title_bar_height;
         r0 = 0.0;
         if (rel.y <= title_bar_height) {
+            // border ring drawn by the title bar itself so it can follow the
+            // rounded silhouette (border_width is the title bar border
+            // thickness for title bar decorations)
+            float tbb = border ? border_width : 0.0;
             // Here, account for radius
             if (title_bar_border_radius > 0.0) {
+                float tb_tl = title_bar_border_radius * corners.x;
+                float tb_tr = title_bar_border_radius * corners.y;
                 vec2 p;
-                if (rel.x < title_bar_border_radius + 0.5) {
-                    if (rel.y < title_bar_border_radius + 0.5) {
-                        p = rel - vec2(title_bar_border_radius);
-                        float r = length(p);
-                        if (r > title_bar_border_radius - 1.0) {
-                            gl_FragColor = antialias(r, title_bar_border_radius - 1.0, title_bar_border_radius, fw2(r, p), title_bar_color);
-                            return;
-                        }
+                if (tb_tl > 0.0 && rel.x < tb_tl + 0.5 && rel.y < tb_tl + 0.5) {
+                    p = rel - vec2(tb_tl);
+                    float r = length(p);
+                    if (r > tb_tl - 1.0) {
+                        gl_FragColor = antialias(r, tb_tl - 1.0, tb_tl, fw2(r, p),
+                            tbb > 0.0 ? border_top : title_bar_color);
+                        return;
+                    } else if (r > tb_tl - tbb) {
+                        gl_FragColor = border_top;
+                        return;
                     }
-                } else if (rel.x > width - (title_bar_border_radius + 0.5)) {
-                    if (rel.y < title_bar_border_radius + 0.5) {
-                        p = rel - vec2(width - title_bar_border_radius, title_bar_border_radius);
-                        float r = length(p);
-                        if (r > title_bar_border_radius - 1.0) {
-                            gl_FragColor = antialias(r, title_bar_border_radius - 1.0, title_bar_border_radius, fw2(r, p), title_bar_color);
-                            return;
-                        }
+                } else if (tb_tr > 0.0 && rel.x > width - (tb_tr + 0.5) && rel.y < tb_tr + 0.5) {
+                    p = rel - vec2(width - tb_tr, tb_tr);
+                    float r = length(p);
+                    if (r > tb_tr - 1.0) {
+                        gl_FragColor = antialias(r, tb_tr - 1.0, tb_tr, fw2(r, p),
+                            tbb > 0.0 ? border_top : title_bar_color);
+                        return;
+                    } else if (r > tb_tr - tbb) {
+                        gl_FragColor = border_top;
+                        return;
                     }
                 }
+            }
+            if (tbb > 0.0 && (rel.x < tbb || rel.x > width - tbb ||
+                    rel.y < tbb || rel.y > title_bar_height - tbb)) {
+                gl_FragColor = border_top;
+                return;
             }
             gl_FragColor = title_bar_color;
             return;
@@ -102,57 +118,55 @@ void main() {
 		rel.y = rel.y - title_height;
         float bw = border_width + 0.5;
         if (border_radius > 0.0) {
-            float r1 = border_radius;
-            float radius1 = r1 + border_width;
-            float radius0 = r0 + border_width;
+            float r_tl = r0 * corners.x;
+            float r_tr = r0 * corners.y;
+            float r_bl = border_radius * corners.z;
+            float r_br = border_radius * corners.w;
 
             vec2 p;
-            if (rel.y < radius0 + 0.5) {
-                if (r0 > 0.0) {
-                    if (rel.x < radius0 + 0.5) {
-                        p = rel - vec2(radius0, radius0);
-                        vec4 c;
-                        if (-p.x < -p.y) {
-                            c = border_top;
-                        } else {
-                            c = border_left;
-                        }
-                        gl_FragColor = circumference(p, r0, c);
-                        return;
-                    } else if (rel.x > width - (radius0 + 0.5)) {
-                        p = rel - vec2(width - radius0, radius0);
-                        vec4 c;
-                        if (p.x < -p.y) {
-                            c = border_top;
-                        } else {
-                            c = border_right;
-                        }
-                        gl_FragColor = circumference(p, r0, c);
-                        return;
-                    }
+            if (r_tl > 0.0 && rel.x < r_tl + bw && rel.y < r_tl + bw) {
+                p = rel - vec2(r_tl + border_width);
+                vec4 c;
+                if (-p.x < -p.y) {
+                    c = border_top;
+                } else {
+                    c = border_left;
                 }
-            } else if (rel.y > height - (radius1 + 0.5)) {
-                if (rel.x < radius1 + 0.5) {
-                    p = rel - vec2(radius1, height - radius1);
-                    vec4 c;
-                    if (-p.x < p.y) {
-                        c = border_bottom;
-                    } else {
-                        c = border_left;
-                    }
-                    gl_FragColor = circumference(p, r1, c);
-                    return;
-                } else if (rel.x > width - (radius1 + 0.5)) {
-                    p = rel - vec2(width - radius1, height - radius1);
-                    vec4 c;
-                    if (p.x < p.y) {
-                        c = border_bottom;
-                    } else {
-                        c = border_right;
-                    }
-                    gl_FragColor = circumference(p, r1, c);
-                    return;
+                gl_FragColor = circumference(p, r_tl, c);
+                return;
+            }
+            if (r_tr > 0.0 && rel.x > width - (r_tr + bw) && rel.y < r_tr + bw) {
+                p = rel - vec2(width - (r_tr + border_width), r_tr + border_width);
+                vec4 c;
+                if (p.x < -p.y) {
+                    c = border_top;
+                } else {
+                    c = border_right;
                 }
+                gl_FragColor = circumference(p, r_tr, c);
+                return;
+            }
+            if (r_bl > 0.0 && rel.x < r_bl + bw && rel.y > height - (r_bl + bw)) {
+                p = rel - vec2(r_bl + border_width, height - (r_bl + border_width));
+                vec4 c;
+                if (-p.x < p.y) {
+                    c = border_bottom;
+                } else {
+                    c = border_left;
+                }
+                gl_FragColor = circumference(p, r_bl, c);
+                return;
+            }
+            if (r_br > 0.0 && rel.x > width - (r_br + bw) && rel.y > height - (r_br + bw)) {
+                p = rel - vec2(width - (r_br + border_width), height - (r_br + border_width));
+                vec4 c;
+                if (p.x < p.y) {
+                    c = border_bottom;
+                } else {
+                    c = border_right;
+                }
+                gl_FragColor = circumference(p, r_br, c);
+                return;
             }
         }
 

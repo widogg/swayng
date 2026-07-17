@@ -674,6 +674,7 @@ struct wlr_renderer *wlr_gles2_renderer_create(struct wlr_egl *egl) {
 	renderer->shaders.decoration.border_right = glGetUniformLocation(prog, "border_right");
 	renderer->shaders.decoration.title_bar_color = glGetUniformLocation(prog, "title_bar_color");
 	renderer->shaders.decoration.dim_color = glGetUniformLocation(prog, "dim_color");
+	renderer->shaders.decoration.corners = glGetUniformLocation(prog, "corners");
 	renderer->shaders.decoration.pos_attrib = glGetAttribLocation(prog, "pos");
 
 	renderer->shaders.shadow.program = prog =
@@ -708,6 +709,7 @@ struct wlr_renderer *wlr_gles2_renderer_create(struct wlr_egl *egl) {
 	renderer->shaders.tex_rgba.flip_y = glGetUniformLocation(prog, "flip_y");
 	renderer->shaders.tex_rgba.radius_top = glGetUniformLocation(prog, "radius_top");
 	renderer->shaders.tex_rgba.radius_bottom = glGetUniformLocation(prog, "radius_bottom");
+	renderer->shaders.tex_rgba.corners = glGetUniformLocation(prog, "corners");
 	renderer->shaders.tex_rgba.pos_attrib = glGetAttribLocation(prog, "pos");
 
 	renderer->shaders.tex_rgbx.program = prog =
@@ -725,6 +727,7 @@ struct wlr_renderer *wlr_gles2_renderer_create(struct wlr_egl *egl) {
 	renderer->shaders.tex_rgbx.flip_y = glGetUniformLocation(prog, "flip_y");
 	renderer->shaders.tex_rgbx.radius_top = glGetUniformLocation(prog, "radius_top");
 	renderer->shaders.tex_rgbx.radius_bottom = glGetUniformLocation(prog, "radius_bottom");
+	renderer->shaders.tex_rgbx.corners = glGetUniformLocation(prog, "corners");
 	renderer->shaders.tex_rgbx.pos_attrib = glGetAttribLocation(prog, "pos");
 
 	if (renderer->exts.OES_egl_image_external) {
@@ -743,6 +746,7 @@ struct wlr_renderer *wlr_gles2_renderer_create(struct wlr_egl *egl) {
 		renderer->shaders.tex_ext.flip_y = glGetUniformLocation(prog, "flip_y");
 		renderer->shaders.tex_ext.radius_top = glGetUniformLocation(prog, "radius_top");
 		renderer->shaders.tex_ext.radius_bottom = glGetUniformLocation(prog, "radius_bottom");
+	renderer->shaders.tex_ext.corners = glGetUniformLocation(prog, "corners");
 		renderer->shaders.tex_ext.pos_attrib = glGetAttribLocation(prog, "pos");
 	}
 

@@ -9,6 +9,7 @@ uniform bool flip_x;
 uniform bool flip_y;
 uniform float radius_top;
 uniform float radius_bottom;
+uniform vec4 corners; // rounded corner mask: tl, tr, bl, br
 
 float antialias(float x, float x0, float x1, float fw) {
     float xmax = max(x1, x + fw);
@@ -44,50 +45,44 @@ void main() {
 		width = box.z;
 		height = box.w;
 	}
-    if (radius_top > 0.0) {
-        if (rel.x < radius_top + 0.5) {
-            if (rel.y < radius_top + 0.5) {
-                vec2 p = rel - vec2(radius_top);
-                float r = length(p);
-                if (r > radius_top - 1.0) {
-                    float opacity = antialias(r, radius_top - 1.0, radius_top, fw2(r, p));
-                    gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
-                    return;
-                }
-            }
-        } else if (rel.x > width - (radius_top + 0.5)) {
-            if (rel.y < radius_top + 0.5) {
-                vec2 p = rel - vec2(width - radius_top, radius_top);
-                float r = length(p);
-                if (r > radius_top - 1.0) {
-                    float opacity = antialias(r, radius_top - 1.0, radius_top, fw2(r, p));
-                    gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
-                    return;
-                }
-            }
+    float r_tl = radius_top * corners.x;
+    float r_tr = radius_top * corners.y;
+    float r_bl = radius_bottom * corners.z;
+    float r_br = radius_bottom * corners.w;
+    if (r_tl > 0.0 && rel.x < r_tl + 0.5 && rel.y < r_tl + 0.5) {
+        vec2 p = rel - vec2(r_tl);
+        float r = length(p);
+        if (r > r_tl - 1.0) {
+            float opacity = antialias(r, r_tl - 1.0, r_tl, fw2(r, p));
+            gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
+            return;
         }
     }
-    if (radius_bottom > 0.0) {
-        if (rel.x < radius_bottom + 0.5) {
-            if (rel.y > height - (radius_bottom + 0.5)) {
-                vec2 p = rel - vec2(radius_bottom, height - radius_bottom);
-                float r = length(p);
-                if (r > radius_bottom - 1.0) {
-                    float opacity = antialias(r, radius_bottom - 1.0, radius_bottom, fw2(r, p));
-                    gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
-                    return;
-                }
-            }
-        } else if (rel.x > width - (radius_bottom + 0.5)) {
-            if (rel.y > height - (radius_bottom + 0.5)) {
-                vec2 p = rel - vec2(width - radius_bottom, height - radius_bottom);
-                float r = length(p);
-                if (r > radius_bottom - 1.0) {
-                    float opacity = antialias(r, radius_bottom - 1.0, radius_bottom, fw2(r, p));
-                    gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
-                    return;
-                }
-            }
+    if (r_tr > 0.0 && rel.x > width - (r_tr + 0.5) && rel.y < r_tr + 0.5) {
+        vec2 p = rel - vec2(width - r_tr, r_tr);
+        float r = length(p);
+        if (r > r_tr - 1.0) {
+            float opacity = antialias(r, r_tr - 1.0, r_tr, fw2(r, p));
+            gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
+            return;
+        }
+    }
+    if (r_bl > 0.0 && rel.x < r_bl + 0.5 && rel.y > height - (r_bl + 0.5)) {
+        vec2 p = rel - vec2(r_bl, height - r_bl);
+        float r = length(p);
+        if (r > r_bl - 1.0) {
+            float opacity = antialias(r, r_bl - 1.0, r_bl, fw2(r, p));
+            gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
+            return;
+        }
+    }
+    if (r_br > 0.0 && rel.x > width - (r_br + 0.5) && rel.y > height - (r_br + 0.5)) {
+        vec2 p = rel - vec2(width - r_br, height - r_br);
+        float r = length(p);
+        if (r > r_br - 1.0) {
+            float opacity = antialias(r, r_br - 1.0, r_br, fw2(r, p));
+            gl_FragColor = texture2D(tex, v_texcoord) * alpha * opacity;
+            return;
         }
     }
 	gl_FragColor = texture2D(tex, v_texcoord) * alpha;
