@@ -287,11 +287,14 @@ static void disable_container(struct sway_container *con) {
 }
 
 static void arrange_container(struct sway_container *con,
-		int width, int height, bool title_bar, int gaps);
+		int width, int height, bool title_bar, int gaps, uint32_t corners);
 
+// `corners` is the set of tile corners (enum wlr_corner bitmask) these
+// children collectively own; each corner is handed down to the child whose
+// title bar or content sits in it so only the outermost tile gets rounded.
 static void arrange_children(enum sway_container_layout layout, list_t *children,
 		struct sway_container *active, struct wlr_scene_tree *content,
-		int width, int height, int gaps) {
+		int width, int height, int gaps, uint32_t corners) {
 	int title_bar_height = container_titlebar_height();
 
 	if (layout == L_TABBED) {
@@ -309,6 +312,9 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			bool activated = child == active;
 			int next_title_offset = round(w * i + w);
 
+			child->title_bar.corners =
+				(i == 0 ? corners & WLR_CORNER_TOP_LEFT : 0) |
+				(i == children->length - 1 ? corners & WLR_CORNER_TOP_RIGHT : 0);
 			arrange_title_bar(child, title_offset, -title_bar_height,
 				next_title_offset - title_offset, title_bar_height);
 			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
@@ -322,7 +328,8 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 
 			int net_height = height - title_bar_height;
 			if (activated && width > 0 && net_height > 0) {
-				arrange_container(child, width, net_height, title_bar_height == 0, 0);
+				arrange_container(child, width, net_height, title_bar_height == 0, 0,
+					title_bar_height == 0 ? corners : corners & WLR_CORNERS_BOTTOM);
 			} else {
 				disable_container(child);
 			}
@@ -344,6 +351,7 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			struct sway_container *child = children->items[i];
 			bool activated = child == active;
 
+			child->title_bar.corners = i == 0 ? corners & WLR_CORNERS_TOP : 0;
 			arrange_title_bar(child, 0, y - title_height, width, title_bar_height);
 			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
 			wlr_scene_node_set_enabled(&child->content_tree->node, activated);
@@ -356,7 +364,8 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 
 			int net_height = height - title_height;
 			if (activated && width > 0 && net_height > 0) {
-				arrange_container(child, width, net_height, title_bar_height == 0, 0);
+				arrange_container(child, width, net_height, title_bar_height == 0, 0,
+					title_bar_height == 0 ? corners : corners & WLR_CORNERS_BOTTOM);
 			} else {
 				disable_container(child);
 			}
@@ -369,11 +378,17 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			struct sway_container *child = children->items[i];
 			int cheight = child->current.height;
 
+			// with gaps the children are visually separate tiles, so they
+			// each get all their corners rounded
+			uint32_t child_corners = gaps > 0 ? WLR_CORNERS_ALL :
+				(i == 0 ? corners & WLR_CORNERS_TOP : 0) |
+				(i == children->length - 1 ? corners & WLR_CORNERS_BOTTOM : 0);
+
 			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
 			wlr_scene_node_set_position(&child->scene_tree->node, 0, off);
 			wlr_scene_node_reparent(&child->scene_tree->node, content);
 			if (width > 0 && cheight > 0) {
-				arrange_container(child, width, cheight, true, gaps);
+				arrange_container(child, width, cheight, true, gaps, child_corners);
 				off += cheight + gaps;
 			} else {
 				disable_container(child);
@@ -385,11 +400,16 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			struct sway_container *child = children->items[i];
 			int cwidth = child->current.width;
 
+			uint32_t child_corners = gaps > 0 ? WLR_CORNERS_ALL :
+				(i == 0 ? corners & (WLR_CORNER_TOP_LEFT | WLR_CORNER_BOTTOM_LEFT) : 0) |
+				(i == children->length - 1 ?
+					corners & (WLR_CORNER_TOP_RIGHT | WLR_CORNER_BOTTOM_RIGHT) : 0);
+
 			wlr_scene_node_set_enabled(&child->decoration.tree->node, true);
 			wlr_scene_node_set_position(&child->scene_tree->node, off, 0);
 			wlr_scene_node_reparent(&child->scene_tree->node, content);
 			if (cwidth > 0 && height > 0) {
-				arrange_container(child, cwidth, height, true, gaps);
+				arrange_container(child, cwidth, height, true, gaps, child_corners);
 				off += cwidth + gaps;
 			} else {
 				disable_container(child);
@@ -401,10 +421,11 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 }
 
 static void arrange_view(struct sway_container *con,
-		int width, int height, bool title_bar) {
+		int width, int height, bool title_bar, uint32_t corners) {
 	double border_top = container_titlebar_height();
 	double border_width = con->current.border_thickness > 0 ?
 		MAX(1, con->current.border_thickness) : 0.0;
+	uint32_t deco_corners = corners;
 
 	if (title_bar && con->current.border != B_NORMAL) {
 		wlr_scene_node_set_enabled(&con->title_bar.tree->node, false);
@@ -412,7 +433,10 @@ static void arrange_view(struct sway_container *con,
 
 	if (con->current.border == B_NORMAL) {
 		if (title_bar) {
+			// the title bar takes the top corners, the content the bottom ones
+			con->title_bar.corners = corners & WLR_CORNERS_TOP;
 			arrange_title_bar(con, 0, 0, width, border_top);
+			deco_corners = corners & WLR_CORNERS_BOTTOM;
 		} else {
 			border_top = 0;
 			// should be handled by the parent container
@@ -440,6 +464,7 @@ static void arrange_view(struct sway_container *con,
 	wlr_scene_node_set_position(&con->decoration.full->node, 0, 0);
 	wlr_scene_decoration_set_border_width(con->decoration.full, border_width);
 	wlr_scene_decoration_set_border_radius(con->decoration.full, radius);
+	wlr_scene_decoration_set_rounded_corners(con->decoration.full, deco_corners);
 
 	// square junction between title_bar.decoration and content borders
 	wlr_scene_decoration_set_title_bar(con->decoration.full,
@@ -505,13 +530,13 @@ static void arrange_view(struct sway_container *con,
 }
 
 static void arrange_container(struct sway_container *con,
-		int width, int height, bool title_bar, int gaps) {
+		int width, int height, bool title_bar, int gaps, uint32_t corners) {
 	// this container might have previously been in the scratchpad,
 	// make sure it's enabled for viewing
 	wlr_scene_node_set_enabled(&con->scene_tree->node, true);
 
 	if (con->view) {
-		arrange_view(con, width, height, title_bar);
+		arrange_view(con, width, height, title_bar, corners);
 	} else {
 		// make sure to disable the title bar if the parent is not managing it
 		if (title_bar) {
@@ -520,7 +545,7 @@ static void arrange_container(struct sway_container *con,
 
 		arrange_children(con->current.layout, con->current.children,
 			con->current.focused_inactive_child, con->content_tree,
-			width, height, gaps);
+			width, height, gaps, corners);
 	}
 }
 
@@ -559,7 +584,8 @@ static void arrange_fullscreen(struct wlr_scene_tree *tree,
 		wlr_scene_buffer_set_dest_size(fs->view->output_handler, width, height);
 	} else {
 		fs_node = &fs->scene_tree->node;
-		arrange_container(fs, width, height, true, container_get_gaps(fs));
+		// fullscreen never rounds
+		arrange_container(fs, width, height, true, container_get_gaps(fs), 0);
 	}
 
 	wlr_scene_node_reparent(fs_node, tree);
@@ -599,7 +625,7 @@ static void arrange_workspace_floating(struct sway_workspace *ws) {
 		wlr_scene_node_set_enabled(&floater->decoration.tree->node, true);
 
 		arrange_container(floater, floater->current.width, floater->current.height,
-			true, ws->gaps_inner);
+			true, ws->gaps_inner, WLR_CORNERS_ALL);
 	}
 }
 
@@ -607,7 +633,7 @@ static void arrange_workspace_tiling(struct sway_workspace *ws,
 		int width, int height) {
 	arrange_children(ws->current.layout, ws->current.tiling,
 		ws->current.focused_inactive_child, ws->layers.tiling,
-		width, height, ws->gaps_inner);
+		width, height, ws->gaps_inner, WLR_CORNERS_ALL);
 }
 
 static void disable_workspace(struct sway_workspace *ws) {

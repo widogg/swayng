@@ -108,14 +108,20 @@ struct sway_container *container_create(struct sway_view *view) {
 		alloc_rect_node(c->title_bar.background, &failed);
 	}
 
+	// every container gets a title bar decoration so tile corners can be
+	// rounded regardless of whether the corner tab holds a view or a
+	// nested layout container
+	c->title_bar.decoration = alloc_decoration_node(c->title_bar.tree, view, &failed);
+	if (c->title_bar.decoration) {
+		wlr_scene_node_lower_to_bottom(&c->title_bar.decoration->node);
+	}
+
 	if (view) {
-		// only containers with views can have decorations
+		// only containers with views can have full decorations
 		c->decoration.full = alloc_decoration_node(c->decoration.tree, view, &failed);
-		c->title_bar.decoration = alloc_decoration_node(c->title_bar.tree, view, &failed);
 		c->shadow = wlr_scene_shadow_create(c->decoration.tree, c->decoration.full);
 		wlr_scene_node_set_enabled(&c->shadow->node, false);
 		wlr_scene_node_lower_to_bottom(&c->shadow->node);
-		wlr_scene_node_lower_to_bottom(&c->title_bar.decoration->node);
 		wlr_scene_node_raise_to_top(&c->title_bar.tree->node);
 	}
 
@@ -304,10 +310,9 @@ void container_update(struct sway_container *con) {
 			scene_rect_set_color(rect, colors->background, alpha);
 		}
 	} else {
-		wl_list_for_each(node, &con->title_bar.border->children, link) {
-			struct wlr_scene_rect *rect = wlr_scene_rect_from_node(node);
-			scene_rect_set_color(rect, colors->border, alpha);
-		}
+		// the title bar decoration draws the border ring (rounded)
+		scene_border_set_colors(con->title_bar.decoration, colors->border,
+			colors->border, colors->border, colors->border, alpha);
 	}
 
 	if (con->view && con->decoration.full) {
@@ -472,13 +477,13 @@ void container_arrange_title_bar(struct sway_container *con) {
 	pixman_region32_fini(&text_area);
 
 	if (container_title_bar_uses_deco(con)) {
+		// fill and border ring are both drawn by the decoration
 		pixman_region32_t empty;
 		pixman_region32_init(&empty);
 		update_rect_list(con->title_bar.background, &empty);
+		update_rect_list(con->title_bar.border, &empty);
 		pixman_region32_fini(&empty);
 		pixman_region32_fini(&background);
-
-		update_rect_list(con->title_bar.border, &border);
 		pixman_region32_fini(&border);
 
 		container_arrange_title_bar_deco(con, width, height);
@@ -907,16 +912,18 @@ size_t container_titlebar_height(void) {
 	return config->font_height + container_titlebar_v_padding() * 2;
 }
 
-size_t container_titlebar_max_radius(void) {
-	return container_titlebar_height() / 2;
-}
-
 static bool container_title_bar_uses_deco(struct sway_container *con) {
-	return con->view && con->decoration.full && con->pending.border != B_CSD;
+	if (!con->title_bar.decoration) {
+		return false;
+	}
+	return !con->view || (con->decoration.full && con->pending.border != B_CSD);
 }
 
 static double container_get_border_radius(struct sway_container *con) {
-	if (!con->view || con->view->using_csd) {
+	if (!con->view) {
+		return config->decoration.border_radius;
+	}
+	if (con->view->using_csd) {
 		return 0.0;
 	}
 	return con->pending.decoration.border_radius;
@@ -928,12 +935,19 @@ static void container_arrange_title_bar_deco(struct sway_container *con,
 		return;
 	}
 
-	double radius = MIN(container_get_border_radius(con),
-		(double)container_titlebar_max_radius());
+	// a corner curve taller than the title bar would spill into the (square)
+	// content below it, so cap the radius at the title bar height
+	double radius = MIN(container_get_border_radius(con), (double)height);
+	// the decoration draws the title bar border ring itself so it follows
+	// the rounded silhouette (plain rects would draw square corners on top)
+	int thickness = config->titlebar_border_thickness;
 	wlr_scene_decoration_set_size(con->title_bar.decoration, width, height);
 	wlr_scene_node_set_position(&con->title_bar.decoration->node, 0, 0);
-	wlr_scene_decoration_set_border_enable(con->title_bar.decoration, false);
+	wlr_scene_decoration_set_border_enable(con->title_bar.decoration, thickness > 0);
+	wlr_scene_decoration_set_border_width(con->title_bar.decoration, thickness);
 	wlr_scene_decoration_set_border_radius(con->title_bar.decoration, radius);
+	wlr_scene_decoration_set_rounded_corners(con->title_bar.decoration,
+		con->title_bar.corners & WLR_CORNERS_TOP);
 	wlr_scene_decoration_set_title_bar(con->title_bar.decoration, true, height, radius);
 	wlr_scene_node_set_enabled(&con->title_bar.decoration->node, true);
 }

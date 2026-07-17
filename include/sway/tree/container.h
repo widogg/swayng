@@ -99,6 +99,10 @@ struct sway_container {
 		struct wlr_scene_tree *background;
 		struct wlr_scene_decoration *decoration;
 
+		// which corners of the outermost tile this title bar owns
+		// (enum wlr_corner bitmask), set during arrange
+		uint32_t corners;
+
 		struct wlr_scene_buffer *icon;
 		int icon_width;
 		int icon_height;
@@ -224,7 +228,6 @@ void container_update_representation(struct sway_container *container);
 size_t container_titlebar_height(void);
 size_t container_titlebar_h_padding(void);
 size_t container_titlebar_v_padding(void);
-size_t container_titlebar_max_radius(void);
 
 void floating_calculate_constraints(int *min_width, int *max_width,
 		int *min_height, int *max_height);
