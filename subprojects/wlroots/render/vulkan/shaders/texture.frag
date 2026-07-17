@@ -15,7 +15,7 @@ layout(push_constant, row_major) uniform UBO {
 	bool flip_y;
 	float radius_top;
 	float radius_bottom;
-	float pad;
+	int rounded_corners;
 	vec4 box;
 } data;
 
@@ -129,50 +129,45 @@ void main() {
 		width = data.box.z;
 		height = data.box.w;
 	}
-    if (data.radius_top > 0.0) {
-        if (rel.x < data.radius_top + 0.5) {
-            if (rel.y < data.radius_top + 0.5) {
-                vec2 p = rel - vec2(data.radius_top);
-                float r = length(p);
-                if (r > data.radius_top - 1.0) {
-                    float opacity = antialias(r, data.radius_top - 1.0, data.radius_top, fw2(r, p));
-                    out_color *= data.alpha * opacity;
-                    return;
-                }
-            }
-        } else if (rel.x > width - (data.radius_top + 0.5)) {
-            if (rel.y < data.radius_top + 0.5) {
-                vec2 p = rel - vec2(width - data.radius_top, data.radius_top);
-                float r = length(p);
-                if (r > data.radius_top - 1.0) {
-                    float opacity = antialias(r, data.radius_top - 1.0, data.radius_top, fw2(r, p));
-                    out_color *= data.alpha * opacity;
-                    return;
-                }
-            }
+    // rounded corner mask: bit 0 = tl, 1 = tr, 2 = bl, 3 = br
+    float r_tl = data.radius_top * float((data.rounded_corners & 1) != 0);
+    float r_tr = data.radius_top * float((data.rounded_corners & 2) != 0);
+    float r_bl = data.radius_bottom * float((data.rounded_corners & 4) != 0);
+    float r_br = data.radius_bottom * float((data.rounded_corners & 8) != 0);
+    if (r_tl > 0.0 && rel.x < r_tl + 0.5 && rel.y < r_tl + 0.5) {
+        vec2 p = rel - vec2(r_tl);
+        float r = length(p);
+        if (r > r_tl - 1.0) {
+            float opacity = antialias(r, r_tl - 1.0, r_tl, fw2(r, p));
+            out_color *= data.alpha * opacity;
+            return;
         }
     }
-    if (data.radius_bottom > 0.0) {
-        if (rel.x < data.radius_bottom + 0.5) {
-            if (rel.y > height - (data.radius_bottom + 0.5)) {
-                vec2 p = rel - vec2(data.radius_bottom, height - data.radius_bottom);
-                float r = length(p);
-                if (r > data.radius_bottom - 1.0) {
-                    float opacity = antialias(r, data.radius_bottom - 1.0, data.radius_bottom, fw2(r, p));
-                    out_color *= data.alpha * opacity;
-                    return;
-                }
-            }
-        } else if (rel.x > width - (data.radius_bottom + 0.5)) {
-            if (rel.y > height - (data.radius_bottom + 0.5)) {
-                vec2 p = rel - vec2(width - data.radius_bottom, height - data.radius_bottom);
-                float r = length(p);
-                if (r > data.radius_bottom - 1.0) {
-                    float opacity = antialias(r, data.radius_bottom - 1.0, data.radius_bottom, fw2(r, p));
-                    out_color *= data.alpha * opacity;
-                    return;
-                }
-            }
+    if (r_tr > 0.0 && rel.x > width - (r_tr + 0.5) && rel.y < r_tr + 0.5) {
+        vec2 p = rel - vec2(width - r_tr, r_tr);
+        float r = length(p);
+        if (r > r_tr - 1.0) {
+            float opacity = antialias(r, r_tr - 1.0, r_tr, fw2(r, p));
+            out_color *= data.alpha * opacity;
+            return;
+        }
+    }
+    if (r_bl > 0.0 && rel.x < r_bl + 0.5 && rel.y > height - (r_bl + 0.5)) {
+        vec2 p = rel - vec2(r_bl, height - r_bl);
+        float r = length(p);
+        if (r > r_bl - 1.0) {
+            float opacity = antialias(r, r_bl - 1.0, r_bl, fw2(r, p));
+            out_color *= data.alpha * opacity;
+            return;
+        }
+    }
+    if (r_br > 0.0 && rel.x > width - (r_br + 0.5) && rel.y > height - (r_br + 0.5)) {
+        vec2 p = rel - vec2(width - r_br, height - r_br);
+        float r = length(p);
+        if (r > r_br - 1.0) {
+            float opacity = antialias(r, r_br - 1.0, r_br, fw2(r, p));
+            out_color *= data.alpha * opacity;
+            return;
         }
     }
 

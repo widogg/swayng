@@ -102,6 +102,7 @@ static bool default_workspace_data(struct wlr_scene_node *node, struct wlr_scene
 static bool default_view_data(struct wlr_surface *surface, struct wlr_scene_view_data *data) {
 	data->total_scale = data->wscale = data->hscale = 1.0;
 	data->radius_top = data->radius_bottom = 0.0f;
+	data->rounded_corners = WLR_CORNERS_ALL;
 	return false;
 }
 
@@ -376,7 +377,8 @@ static void scene_node_opaque_region(struct wlr_scene_node *node, int x, int y,
 			return;
 		}
 
-		if (scene_buffer->radius_top > 0.0f || scene_buffer->radius_bottom > 0.0f) {
+		if (scene_buffer->rounded_corners != 0 &&
+				(scene_buffer->radius_top > 0.0f || scene_buffer->radius_bottom > 0.0f)) {
 			return;
 		}
 
@@ -1005,7 +1007,7 @@ static struct wlr_object *scene_decoration_get_object(
 struct wlr_scene_decoration *wlr_scene_decoration_create(struct wlr_scene_tree *parent,
 		void *view, double width, double height) {
 	assert(parent);
-	assert(view);
+	// view is optional: it is only consumed by compositor callbacks
 	assert(width >= 0 && height >= 0);
 
 	struct wlr_scene_decoration *decoration = calloc(1, sizeof(*decoration));
@@ -1017,6 +1019,7 @@ struct wlr_scene_decoration *wlr_scene_decoration_create(struct wlr_scene_tree *
 	decoration->view = view;
 	decoration->width = width;
 	decoration->height = height;
+	decoration->rounded_corners = WLR_CORNERS_ALL;
 
 	scene_node_update(&decoration->node, NULL);
 
@@ -1063,6 +1066,15 @@ void wlr_scene_decoration_set_border_radius(struct wlr_scene_decoration *decorat
 		return;
 	}
 	decoration->border_radius = radius;
+	scene_node_update(&decoration->node, NULL);
+}
+
+void wlr_scene_decoration_set_rounded_corners(struct wlr_scene_decoration *decoration,
+		uint32_t corners) {
+	if (decoration->rounded_corners == corners) {
+		return;
+	}
+	decoration->rounded_corners = corners;
 	scene_node_update(&decoration->node, NULL);
 }
 
@@ -1266,6 +1278,7 @@ struct wlr_scene_buffer *wlr_scene_buffer_create(struct wlr_scene_tree *parent,
 	wl_list_init(&scene_buffer->buffer_release.link);
 	wl_list_init(&scene_buffer->renderer_destroy.link);
 	scene_buffer->opacity = 1;
+	scene_buffer->rounded_corners = WLR_CORNERS_ALL;
 
 	scene_buffer_set_buffer(scene_buffer, buffer);
 	scene_node_update(&scene_buffer->node, NULL);
@@ -1488,14 +1501,16 @@ void wlr_scene_buffer_set_dest_size(struct wlr_scene_buffer *scene_buffer,
 }
 
 void wlr_scene_buffer_set_radius(struct wlr_scene_buffer *scene_buffer,
-	float radius_top, float radius_bottom) {
-	if (scene_buffer->radius_top == radius_top && scene_buffer->radius_bottom == radius_bottom) {
+	float radius_top, float radius_bottom, uint32_t rounded_corners) {
+	if (scene_buffer->radius_top == radius_top && scene_buffer->radius_bottom == radius_bottom &&
+			scene_buffer->rounded_corners == rounded_corners) {
 		return;
 	}
 
 	assert(radius_top >= 0 && radius_bottom >= 0);
 	scene_buffer->radius_top = radius_top;
 	scene_buffer->radius_bottom = radius_bottom;
+	scene_buffer->rounded_corners = rounded_corners;
 	scene_node_update(&scene_buffer->node, NULL);
 }
 
@@ -2025,6 +2040,7 @@ static void scene_entry_render(struct render_list_entry *entry, const struct ren
 			.flip_y = flip_y,
 			.radius_top = round(scene_buffer->radius_top * data->scale * scale),
 			.radius_bottom = round(scene_buffer->radius_bottom * data->scale * scale),
+			.rounded_corners = scene_buffer->rounded_corners,
 			.texture = texture,
 			.src_box = scene_buffer->src_box,
 			.dst_box = dst_box,
@@ -2076,6 +2092,7 @@ static void scene_entry_render(struct render_list_entry *entry, const struct ren
 			.object = object,
 			.border = scene_decoration->border,
 			.border_radius = round(scene_decoration->border_radius * data->scale * scale),
+			.rounded_corners = scene_decoration->rounded_corners,
 			.border_width = MAX(1.0, round(scene_decoration->border_width * data->scale * scale)),
 			.border_top_color = {
 				.r = scene_decoration->border_top_color[0],

@@ -400,7 +400,7 @@ struct wlr_vk_frag_texture_pcr_data {
 	int flip_y;
 	float radius_top;
 	float radius_bottom;
-	float pad;
+	int rounded_corners;
 	float box[4];
 };
 
@@ -414,7 +414,8 @@ struct wlr_vk_frag_decoration_pcr_data {
 	float title_bar_border_radius;
 	int swap_xy;
 	int flip_x, flip_y;
-	float pad1, pad2;
+	int rounded_corners;
+	float pad2;
 	float box[4];
 	float border_top[4];
 	float border_bottom[4];

@@ -12,7 +12,7 @@ layout(binding = 0) uniform UBO {
 	bool swap_xy;
 	bool flip_x;
 	bool flip_y;
-	float pad1;
+	int rounded_corners; // bit 0 = tl, 1 = tr, 2 = bl, 3 = br
 	float pad2;
 	vec4 box;
 	vec4 border_top;
@@ -73,28 +73,43 @@ void main() {
         title_height = data.title_bar_height;
         r0 = 0.0;
         if (rel.y <= data.title_bar_height) {
+            // border ring drawn by the title bar itself so it can follow the
+            // rounded silhouette (border_width is the title bar border
+            // thickness for title bar decorations)
+            float tbb = data.border ? data.border_width : 0.0;
             // Here, account for radius
             if (data.title_bar_border_radius > 0.0) {
+                float tb_tl = data.title_bar_border_radius * float((data.rounded_corners & 1) != 0);
+                float tb_tr = data.title_bar_border_radius * float((data.rounded_corners & 2) != 0);
                 vec2 p;
-                if (rel.x < data.title_bar_border_radius + 0.5) {
-                    if (rel.y < data.title_bar_border_radius + 0.5) {
-                        p = rel - vec2(data.title_bar_border_radius);
-                        float r = length(p);
-                        if (r > data.title_bar_border_radius - 1.0) {
-                            out_color = antialias(r, data.title_bar_border_radius - 1.0, data.title_bar_border_radius, fw2(r, p), data.title_bar_color);
-                            return;
-                        }
+                if (tb_tl > 0.0 && rel.x < tb_tl + 0.5 && rel.y < tb_tl + 0.5) {
+                    p = rel - vec2(tb_tl);
+                    float r = length(p);
+                    if (r > tb_tl - 1.0) {
+                        out_color = antialias(r, tb_tl - 1.0, tb_tl, fw2(r, p),
+                            tbb > 0.0 ? data.border_top : data.title_bar_color);
+                        return;
+                    } else if (r > tb_tl - tbb) {
+                        out_color = data.border_top;
+                        return;
                     }
-                } else if (rel.x > width - (data.title_bar_border_radius + 0.5)) {
-                    if (rel.y < data.title_bar_border_radius + 0.5) {
-                        p = rel - vec2(width - data.title_bar_border_radius, data.title_bar_border_radius);
-                        float r = length(p);
-                        if (r > data.title_bar_border_radius - 1.0) {
-                            out_color = antialias(r, data.title_bar_border_radius - 1.0, data.title_bar_border_radius, fw2(r, p), data.title_bar_color);
-                            return;
-                        }
+                } else if (tb_tr > 0.0 && rel.x > width - (tb_tr + 0.5) && rel.y < tb_tr + 0.5) {
+                    p = rel - vec2(width - tb_tr, tb_tr);
+                    float r = length(p);
+                    if (r > tb_tr - 1.0) {
+                        out_color = antialias(r, tb_tr - 1.0, tb_tr, fw2(r, p),
+                            tbb > 0.0 ? data.border_top : data.title_bar_color);
+                        return;
+                    } else if (r > tb_tr - tbb) {
+                        out_color = data.border_top;
+                        return;
                     }
                 }
+            }
+            if (tbb > 0.0 && (rel.x < tbb || rel.x > width - tbb ||
+                    rel.y < tbb || rel.y > data.title_bar_height - tbb)) {
+                out_color = data.border_top;
+                return;
             }
             out_color = data.title_bar_color;
             return;
@@ -108,57 +123,55 @@ void main() {
 		rel.y = rel.y - title_height;
         float bw = data.border_width + 0.5;
         if (data.border_radius > 0.0) {
-            float r1 = data.border_radius;
-            float radius1 = r1 + data.border_width;
-            float radius0 = r0 + data.border_width;
+            float r_tl = r0 * float((data.rounded_corners & 1) != 0);
+            float r_tr = r0 * float((data.rounded_corners & 2) != 0);
+            float r_bl = data.border_radius * float((data.rounded_corners & 4) != 0);
+            float r_br = data.border_radius * float((data.rounded_corners & 8) != 0);
 
             vec2 p;
-            if (rel.y < radius0 + 0.5) {
-                if (r0 > 0.0) {
-                    if (rel.x < radius0 + 0.5) {
-                        p = rel - vec2(radius0, radius0);
-                        vec4 c;
-                        if (-p.x < -p.y) {
-                            c = data.border_top;
-                        } else {
-                            c = data.border_left;
-                        }
-                        out_color = circumference(p, r0, c);
-                        return;
-                    } else if (rel.x > width - (radius0 + 0.5)) {
-                        p = rel - vec2(width - radius0, radius0);
-                        vec4 c;
-                        if (p.x < -p.y) {
-                            c = data.border_top;
-                        } else {
-                            c = data.border_right;
-                        }
-                        out_color = circumference(p, r0, c);
-                        return;
-                    }
+            if (r_tl > 0.0 && rel.x < r_tl + bw && rel.y < r_tl + bw) {
+                p = rel - vec2(r_tl + data.border_width);
+                vec4 c;
+                if (-p.x < -p.y) {
+                    c = data.border_top;
+                } else {
+                    c = data.border_left;
                 }
-            } else if (rel.y > height - (radius1 + 0.5)) {
-                if (rel.x < radius1 + 0.5) {
-                    p = rel - vec2(radius1, height - radius1);
-                    vec4 c;
-                    if (-p.x < p.y) {
-                        c = data.border_bottom;
-                    } else {
-                        c = data.border_left;
-                    }
-                    out_color = circumference(p, r1, c);
-                    return;
-                } else if (rel.x > width - (radius1 + 0.5)) {
-                    p = rel - vec2(width - radius1, height - radius1);
-                    vec4 c;
-                    if (p.x < p.y) {
-                        c = data.border_bottom;
-                    } else {
-                        c = data.border_right;
-                    }
-                    out_color = circumference(p, r1, c);
-                    return;
+                out_color = circumference(p, r_tl, c);
+                return;
+            }
+            if (r_tr > 0.0 && rel.x > width - (r_tr + bw) && rel.y < r_tr + bw) {
+                p = rel - vec2(width - (r_tr + data.border_width), r_tr + data.border_width);
+                vec4 c;
+                if (p.x < -p.y) {
+                    c = data.border_top;
+                } else {
+                    c = data.border_right;
                 }
+                out_color = circumference(p, r_tr, c);
+                return;
+            }
+            if (r_bl > 0.0 && rel.x < r_bl + bw && rel.y > height - (r_bl + bw)) {
+                p = rel - vec2(r_bl + data.border_width, height - (r_bl + data.border_width));
+                vec4 c;
+                if (-p.x < p.y) {
+                    c = data.border_bottom;
+                } else {
+                    c = data.border_left;
+                }
+                out_color = circumference(p, r_bl, c);
+                return;
+            }
+            if (r_br > 0.0 && rel.x > width - (r_br + bw) && rel.y > height - (r_br + bw)) {
+                p = rel - vec2(width - (r_br + data.border_width), height - (r_br + data.border_width));
+                vec4 c;
+                if (p.x < p.y) {
+                    c = data.border_bottom;
+                } else {
+                    c = data.border_right;
+                }
+                out_color = circumference(p, r_br, c);
+                return;
             }
         }
 
