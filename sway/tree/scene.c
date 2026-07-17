@@ -117,15 +117,18 @@ static bool scene_workspace_data(struct wlr_scene_node *node, struct wlr_scene_w
 static bool scene_view_data(struct wlr_surface *surface, struct wlr_scene_view_data *data) {
 	struct sway_view *view = view_from_wlr_surface(surface);
 	data->radius_top = data->radius_bottom = 0.0f;
+	data->rounded_corners = 0;
 	if (view) {
 		data->total_scale = 1.0;
 		data->wscale = data->hscale = 1.0;
 		if (view->container && !container_is_fullscreen_or_child(view->container) &&
 				!view->using_csd && view->container->decoration.full) {
-			if (!view->container->decoration.full->title_bar) {
-				data->radius_top = view->container->decoration.full->border_radius;
+			struct wlr_scene_decoration *deco = view->container->decoration.full;
+			data->rounded_corners = deco->rounded_corners;
+			if (!deco->title_bar) {
+				data->radius_top = deco->border_radius;
 			}
-			data->radius_bottom = view->container->decoration.full->border_radius;
+			data->radius_bottom = deco->border_radius;
 		}
 		return true;
 	}
