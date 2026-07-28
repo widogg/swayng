@@ -30,16 +30,18 @@ vec4 antialias(float x, float x0, float x1, float fw, vec4 color) {
     return color * alpha;
 }
 
-float fw2(float r, vec2 p) {
-    vec2 ap = abs(p);
-    return 0.5 * r / max(ap.x, ap.y);
+// analytic ~1px box-filter coverage of a disc of radius r at distance d
+float circle_cov(float d, float r) {
+    return clamp(r + 0.5 - d, 0.0, 1.0);
 }
 
 vec4 circumference(vec2 p, float r, vec4 c) {
     float d = length(p);
-    vec4 color = antialias(d, r, r + border_width, fw2(d, p), c);
-	if (dim && d < r + 1.0) {
-		return mix(dim_color, color, color.a);
+    float cov_out = circle_cov(d, r + border_width);
+    float cov_in = circle_cov(d, r);
+    vec4 color = c * (cov_out - cov_in);
+	if (dim) {
+		color += dim_color * cov_in;
 	}
 	return color;
 }
@@ -76,27 +78,20 @@ void main() {
             if (title_bar_border_radius > 0.0) {
                 float tb_tl = title_bar_border_radius * corners.x;
                 float tb_tr = title_bar_border_radius * corners.y;
-                vec2 p;
                 if (tb_tl > 0.0 && rel.x < tb_tl + 0.5 && rel.y < tb_tl + 0.5) {
-                    p = rel - vec2(tb_tl);
-                    float r = length(p);
-                    if (r > tb_tl - 1.0) {
-                        gl_FragColor = antialias(r, tb_tl - 1.0, tb_tl, fw2(r, p),
-                            tbb > 0.0 ? border_top : title_bar_color);
-                        return;
-                    } else if (r > tb_tl - tbb) {
-                        gl_FragColor = border_top;
+                    float d = length(rel - vec2(tb_tl));
+                    float cov_out = circle_cov(d, tb_tl);
+                    float cov_in = circle_cov(d, tb_tl - tbb); // == cov_out when tbb is 0
+                    if (cov_in < 1.0) {
+                        gl_FragColor = title_bar_color * cov_in + border_top * (cov_out - cov_in);
                         return;
                     }
                 } else if (tb_tr > 0.0 && rel.x > width - (tb_tr + 0.5) && rel.y < tb_tr + 0.5) {
-                    p = rel - vec2(width - tb_tr, tb_tr);
-                    float r = length(p);
-                    if (r > tb_tr - 1.0) {
-                        gl_FragColor = antialias(r, tb_tr - 1.0, tb_tr, fw2(r, p),
-                            tbb > 0.0 ? border_top : title_bar_color);
-                        return;
-                    } else if (r > tb_tr - tbb) {
-                        gl_FragColor = border_top;
+                    float d = length(rel - vec2(width - tb_tr, tb_tr));
+                    float cov_out = circle_cov(d, tb_tr);
+                    float cov_in = circle_cov(d, tb_tr - tbb);
+                    if (cov_in < 1.0) {
+                        gl_FragColor = title_bar_color * cov_in + border_top * (cov_out - cov_in);
                         return;
                     }
                 }

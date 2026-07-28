@@ -64,20 +64,9 @@ vec3 bt1886_color_to_linear(vec3 color) {
 	return (L - Lmin) / (Lmax - Lmin);
 }
 
-float antialias(float x, float x0, float x1, float fw) {
-    float xmax = max(x1, x + fw);
-    float xmin = min(x0, x - fw);
-    float len = xmax - xmin;
-    float d0 = abs(x + fw - x1);
-    float d1 = abs(x - fw - x0);
-    float overlap = len - d0 - d1;
-    float alpha = smoothstep(0.0, 1.0, overlap);
-    return alpha;
-}
-
-float fw2(float r, vec2 p) {
-    vec2 ap = abs(p);
-    return 0.5 * r / max(ap.x, ap.y);
+// analytic ~1px box-filter coverage of a disc of radius r at distance d
+float circle_cov(float d, float r) {
+    return clamp(r + 0.5 - d, 0.0, 1.0);
 }
 
 void main() {
@@ -135,38 +124,30 @@ void main() {
     float r_bl = data.radius_bottom * float((data.rounded_corners & 4) != 0);
     float r_br = data.radius_bottom * float((data.rounded_corners & 8) != 0);
     if (r_tl > 0.0 && rel.x < r_tl + 0.5 && rel.y < r_tl + 0.5) {
-        vec2 p = rel - vec2(r_tl);
-        float r = length(p);
-        if (r > r_tl - 1.0) {
-            float opacity = antialias(r, r_tl - 1.0, r_tl, fw2(r, p));
-            out_color *= data.alpha * opacity;
+        float cov = circle_cov(length(rel - vec2(r_tl)), r_tl);
+        if (cov < 1.0) {
+            out_color *= data.alpha * cov;
             return;
         }
     }
     if (r_tr > 0.0 && rel.x > width - (r_tr + 0.5) && rel.y < r_tr + 0.5) {
-        vec2 p = rel - vec2(width - r_tr, r_tr);
-        float r = length(p);
-        if (r > r_tr - 1.0) {
-            float opacity = antialias(r, r_tr - 1.0, r_tr, fw2(r, p));
-            out_color *= data.alpha * opacity;
+        float cov = circle_cov(length(rel - vec2(width - r_tr, r_tr)), r_tr);
+        if (cov < 1.0) {
+            out_color *= data.alpha * cov;
             return;
         }
     }
     if (r_bl > 0.0 && rel.x < r_bl + 0.5 && rel.y > height - (r_bl + 0.5)) {
-        vec2 p = rel - vec2(r_bl, height - r_bl);
-        float r = length(p);
-        if (r > r_bl - 1.0) {
-            float opacity = antialias(r, r_bl - 1.0, r_bl, fw2(r, p));
-            out_color *= data.alpha * opacity;
+        float cov = circle_cov(length(rel - vec2(r_bl, height - r_bl)), r_bl);
+        if (cov < 1.0) {
+            out_color *= data.alpha * cov;
             return;
         }
     }
     if (r_br > 0.0 && rel.x > width - (r_br + 0.5) && rel.y > height - (r_br + 0.5)) {
-        vec2 p = rel - vec2(width - r_br, height - r_br);
-        float r = length(p);
-        if (r > r_br - 1.0) {
-            float opacity = antialias(r, r_br - 1.0, r_br, fw2(r, p));
-            out_color *= data.alpha * opacity;
+        float cov = circle_cov(length(rel - vec2(width - r_br, height - r_br)), r_br);
+        if (cov < 1.0) {
+            out_color *= data.alpha * cov;
             return;
         }
     }
