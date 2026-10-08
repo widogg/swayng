@@ -14,6 +14,8 @@ sway_sources = files(
 	'server.c',
 	'sway_text_node.c',
 	'swaynag.c',
+	'view_icon.c',
+	'../swaybar/tray/icon.c',
 	'xdg_activation_v1.c',
 	'xdg_decoration.c',
 
@@ -140,6 +142,7 @@ sway_sources = files(
 	'commands/tiling_drag_threshold.c',
 	'commands/title_align.c',
 	'commands/title_format.c',
+	'commands/title_window_icon.c',
 	'commands/titlebar_border_thickness.c',
 	'commands/titlebar_padding.c',
 	'commands/titlebar_separator.c',
@@ -266,6 +269,11 @@ sway_deps = [
 
 if wlroots_features['xwayland']
 	sway_sources += 'desktop/xwayland.c'
+	sway_deps += dependency('xcb-ewmh')
+endif
+
+if gdk_pixbuf.found()
+	sway_deps += gdk_pixbuf
 endif
 
 if wlroots_features['libinput_backend']

@@ -1016,6 +1016,12 @@ The default colors are:
 	to _yes_, the marks will be shown on the _left_ side instead of the
 	_right_ side.
 
+*title_window_icon* on|off|toggle|padding <px>
+	Shows the application icon to the left of the title text. Enabled by default;
+	use *off* to disable. Icons appear only where a title bar is shown.
+	Icons come from the xdg-toplevel-icon-v1 protocol, \_NET_WM_ICON on
+	XWayland, or a themed icon lookup from app_id/class.
+
 *ultrawide_mode* enable|disable
 	Enables or disables usage of alternate ultrawide horizontal layout. Workspaces
 	with two horizontal windows will be split 67/33 rather than 50/50 by default.

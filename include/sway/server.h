@@ -120,6 +120,9 @@ struct sway_server {
 	struct wl_listener xdg_activation_v1_new_token;
 
 	struct wl_listener xdg_toplevel_tag_manager_v1_set_tag;
+	struct wl_listener xdg_toplevel_icon_manager_v1_set_icon;
+
+	struct wlr_xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
 
 	struct wl_listener request_set_cursor_shape;
 
