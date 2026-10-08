@@ -1313,7 +1313,6 @@ static void container_fullscreen_workspace(struct sway_container *con) {
 				"Expected a non-fullscreen container")) {
 		return;
 	}
-	set_fullscreen(con, true);
 	con->pending.fullscreen_mode = FULLSCREEN_WORKSPACE;
 
 	con->saved_x = con->pending.x;
@@ -1347,7 +1346,6 @@ static void container_fullscreen_global(struct sway_container *con) {
 				"Expected a non-fullscreen container")) {
 		return;
 	}
-	set_fullscreen(con, true);
 
 	root->fullscreen_global = con;
 	con->saved_x = con->pending.x;
@@ -1373,7 +1371,6 @@ void container_fullscreen_disable(struct sway_container *con) {
 				"Expected a fullscreen container")) {
 		return;
 	}
-	set_fullscreen(con, false);
 
 	if (container_is_floating(con)) {
 		con->pending.x = con->saved_x;
@@ -1448,6 +1445,35 @@ void container_set_fullscreen(struct sway_container *con,
 		}
 		container_fullscreen_global(con);
 		break;
+	}
+}
+
+void container_set_fullscreen_container(struct sway_container *con,
+		enum sway_fullscreen_state mode) {
+	con->pending.fullscreen_container = mode;
+}
+
+// Application fullscreen only tells the client; the tile keeps its layout.
+void container_set_fullscreen_application(struct sway_container *con,
+		enum sway_fullscreen_state mode) {
+	if (con->pending.fullscreen_application == mode) {
+		return;
+	}
+	con->pending.fullscreen_application = mode;
+	set_fullscreen(con, mode == FULLSCREEN_ENABLED);
+}
+
+void container_handle_fullscreen_request(struct sway_container *con, bool enable) {
+	if (enable) {
+		container_set_fullscreen_application(con, FULLSCREEN_ENABLED);
+		if (con->pending.fullscreen_mode == FULLSCREEN_NONE) {
+			container_set_fullscreen(con, FULLSCREEN_WORKSPACE);
+		}
+	} else {
+		container_set_fullscreen_application(con, FULLSCREEN_DISABLED);
+		if (con->pending.fullscreen_container != FULLSCREEN_ENABLED) {
+			container_set_fullscreen(con, FULLSCREEN_NONE);
+		}
 	}
 }
 

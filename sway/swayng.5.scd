@@ -155,10 +155,14 @@ They are expected to be used with *bindsym* or at runtime through *swayngmsg*(1)
 *focus* mode_toggle
 	Moves focus between the floating and tiled layers.
 
-*fullscreen* [enable|disable|toggle] [global]
+*fullscreen* [enable|disable|toggle] [global|application]
 	Makes focused window fullscreen, non-fullscreen, or the opposite of what it
 	is now. If no argument is given, it does the same as _toggle_. If _global_
 	is specified, the window will be fullscreen across all outputs.
+
+	Layout fullscreen does not tell the client it is fullscreen. With
+	_application_, only the client is told it is fullscreen and the window
+	stays tiled (fake fullscreen). A client request for fullscreen sets both.
 
 *gaps* inner|outer|horizontal|vertical|top|right|bottom|left all|current
 set|plus|minus|toggle <amount>
