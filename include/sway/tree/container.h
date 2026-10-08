@@ -91,6 +91,9 @@ struct sway_container {
 		int icon_width;
 		int icon_height;
 
+		// tile corners this title bar may round (non-zero = owned)
+		struct fx_corner_radii corners;
+
 		struct sway_text_node *title_text;
 		struct sway_text_node *marks_text;
 	} title_bar;
@@ -159,6 +162,8 @@ struct sway_container {
 	float alpha;
 
 	int corner_radius;
+	// tile corners this container may round (non-zero = owned), set on arrange
+	struct fx_corner_radii tile_corners;
 	bool blur_enabled;
 	bool shadow_enabled;
 	float dim;
@@ -419,5 +424,8 @@ void container_update_itself_and_parents(struct sway_container *con);
 bool container_has_shadow(struct sway_container *con);
 
 bool container_has_corner_radius(struct sway_container *con);
+
+struct fx_corner_radii container_get_content_corners(struct sway_container *con,
+		int radius, bool has_titlebar);
 
 #endif

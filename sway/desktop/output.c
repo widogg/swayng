@@ -320,8 +320,8 @@ void output_configure_scene(struct sway_output *output, struct wlr_scene_node *n
 		}
 
 		bool is_subsurface = surface && surface->surface && wlr_subsurface_try_from_wlr_surface(surface->surface);
-		wlr_scene_buffer_set_corner_radii(buffer, has_titlebar && !is_subsurface ?
-			corner_radii_bottom(corner_radius) : corner_radii_all(corner_radius));
+		wlr_scene_buffer_set_corner_radii(buffer, container_get_content_corners(
+			closest_con, corner_radius, has_titlebar && !is_subsurface));
 		
 		if (is_subsurface) {
 			return;
@@ -337,8 +337,8 @@ void output_configure_scene(struct sway_output *output, struct wlr_scene_node *n
 		wlr_scene_blur_set_should_only_blur_bottom_layer(blur, should_optimize_blur);
 		wlr_scene_blur_set_strength(blur, opacity);
 		wlr_scene_node_set_enabled(node, closest_con->blur_enabled);
-		wlr_scene_blur_set_corner_radii(blur, has_titlebar ?
-			corner_radii_bottom(corner_radius) : corner_radii_all(corner_radius));
+		wlr_scene_blur_set_corner_radii(blur,
+			container_get_content_corners(closest_con, corner_radius, has_titlebar));
 	}
 }
 

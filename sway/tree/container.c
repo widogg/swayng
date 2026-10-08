@@ -117,6 +117,8 @@ struct sway_container *container_create(struct sway_view *view) {
 	c->marks = create_list();
 
 	c->corner_radius = config->corner_radius;
+	c->tile_corners = corner_radii_all(1);
+	c->title_bar.corners = corner_radii_all(1);
 	c->blur_enabled = config->blur_enabled;
 	c->shadow_enabled = config->shadow_enabled;
 	c->dim = config->default_dim_inactive;
@@ -322,33 +324,7 @@ void container_update_itself_and_parents(struct sway_container *con) {
 static struct fx_corner_radii get_titlebar_corners(struct sway_container *con) {
 	int radius = container_has_corner_radius(con) ? con->corner_radius +
 		con->current.border_thickness - config->titlebar_border_thickness : 0;
-	struct fx_corner_radii corners = corner_radii_top(radius);
-
-	enum sway_container_layout layout;
-	const list_t *siblings;
-	if (con->current.parent) {
-		layout = con->current.parent->current.layout;
-		siblings = con->current.parent->current.children;
-	} else if (con->current.workspace) {
-		layout = con->current.workspace->layout;
-		siblings = con->current.workspace->tiling;
-	} else {
-		return corners;
-	}
-
-	if (layout == L_TABBED && siblings->length > 1) {
-		if (siblings->items[0] == con) {
-			corners.top_right = 0;
-		} else if (siblings->items[siblings->length - 1] == con) {
-			corners.top_left = 0;
-		} else {
-			return corner_radii_none();
-		}
-	} else if (layout == L_STACKED && siblings->items[0] != con) {
-		return corner_radii_none();
-	}
-
-	return corners;
+	return fx_corner_radii_filter(corner_radii_top(radius), con->title_bar.corners);
 }
 
 static void arrange_titlebar_bg_rect(struct wlr_scene_rect *rect,
@@ -2064,6 +2040,13 @@ bool container_has_shadow(struct sway_container *con) {
 	bool has_gaps = gaps.top > 0 || gaps.right > 0 || gaps.bottom > 0 || gaps.left > 0;
 
 	return (container_is_floating_or_child(con) || has_gaps) && shadow_enabled;
+}
+
+struct fx_corner_radii container_get_content_corners(struct sway_container *con,
+		int radius, bool has_titlebar) {
+	struct fx_corner_radii corners = has_titlebar ?
+		corner_radii_bottom(radius) : corner_radii_all(radius);
+	return fx_corner_radii_filter(corners, con->tile_corners);
 }
 
 bool container_has_corner_radius(struct sway_container *con) {

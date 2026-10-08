@@ -418,10 +418,13 @@ static void arrange_inactive_child(struct sway_container *child,
 	disable_container(child);
 }
 
+// `corners` are the tile corners these children own together; each is handed
+// to the child sitting in it so only the outermost tile rounds.
 static void arrange_children(enum sway_container_layout layout, list_t *children,
 		struct sway_container *active, struct wlr_scene_tree *content,
-		int width, int height, int gaps) {
+		int width, int height, int gaps, struct fx_corner_radii corners) {
 	int title_bar_height = container_titlebar_height();
+	int last = children->length - 1;
 
 	if (layout == L_TABBED) {
 		struct sway_container *first = children->length == 1 ?
@@ -438,6 +441,10 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			bool activated = child == active;
 			int next_title_offset = round(w * i + w);
 
+			child->title_bar.corners = corner_radii_new(
+				i == 0 ? corners.top_left : 0, i == last ? corners.top_right : 0, 0, 0);
+			child->tile_corners = title_bar_height == 0 ? corners :
+				fx_corner_radii_filter(corners, corner_radii_bottom(1));
 			arrange_title_bar(child, title_offset, -title_bar_height,
 				next_title_offset - title_offset, title_bar_height);
 			wlr_scene_node_set_enabled(&child->border.tree->node, activated);
@@ -470,6 +477,10 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			struct sway_container *child = children->items[i];
 			bool activated = child == active;
 
+			child->title_bar.corners = i == 0 ?
+				fx_corner_radii_filter(corners, corner_radii_top(1)) : corner_radii_none();
+			child->tile_corners = title_bar_height == 0 ? corners :
+				fx_corner_radii_filter(corners, corner_radii_bottom(1));
 			arrange_title_bar(child, 0, y - title_height, width, title_bar_height);
 			wlr_scene_node_set_enabled(&child->border.tree->node, activated);
 			wlr_scene_node_set_enabled(&child->blur->node, activated);
@@ -492,6 +503,11 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 			struct sway_container *child = children->items[i];
 			int cheight = child->current.height;
 
+			// gaps make each child a separate tile with all corners
+			child->tile_corners = gaps > 0 ? corner_radii_all(1) : corner_radii_new(
+				i == 0 ? corners.top_left : 0, i == 0 ? corners.top_right : 0,
+				i == last ? corners.bottom_right : 0, i == last ? corners.bottom_left : 0);
+
 			wlr_scene_node_set_enabled(&child->border.tree->node, true);
 			wlr_scene_node_set_enabled(&child->blur->node, true);
 			wlr_scene_node_set_enabled(&child->shadow->node,
@@ -509,6 +525,10 @@ static void arrange_children(enum sway_container_layout layout, list_t *children
 		for (int i = 0; i < children->length; i++) {
 			struct sway_container *child = children->items[i];
 			int cwidth = child->current.width;
+
+			child->tile_corners = gaps > 0 ? corner_radii_all(1) : corner_radii_new(
+				i == 0 ? corners.top_left : 0, i == last ? corners.top_right : 0,
+				i == last ? corners.bottom_right : 0, i == 0 ? corners.bottom_left : 0);
 
 			wlr_scene_node_set_enabled(&child->border.tree->node, true);
 			wlr_scene_node_set_enabled(&child->blur->node, true);
@@ -590,6 +610,8 @@ static void _arrange_container(struct sway_container *con,
 		if (con->current.border == B_NORMAL) {
 			vert_border_offset = 0;
 			if (title_bar) {
+				con->title_bar.corners =
+					fx_corner_radii_filter(con->tile_corners, corner_radii_top(1));
 				arrange_title_bar(con, 0, 0, width, border_top);
 			} else {
 				border_top = 0;
@@ -622,10 +644,12 @@ static void _arrange_container(struct sway_container *con,
 
 		if (border_top) {
 			wlr_scene_rect_set_size(con->border.top, width, border_top + corner_radius);
-			wlr_scene_rect_set_corner_radii(con->border.top, corner_radii_top(!has_corner_radius ? 0 :
-					corner_radius + border_width));
+			wlr_scene_rect_set_corner_radii(con->border.top, fx_corner_radii_filter(
+				corner_radii_top(!has_corner_radius ? 0 : corner_radius + border_width),
+				con->tile_corners));
 			wlr_scene_rect_set_clipped_region(con->border.top, (struct clipped_region) {
-				.corners = corner_radii_top(corner_radius),
+				.corners = fx_corner_radii_filter(corner_radii_top(corner_radius),
+					con->tile_corners),
 				.area = {
 					.x = border_width,
 					.y = border_width,
@@ -639,11 +663,13 @@ static void _arrange_container(struct sway_container *con,
 
 		if (border_bottom) {
 			wlr_scene_rect_set_size(con->border.bottom, width, border_bottom + corner_radius);
-			wlr_scene_rect_set_corner_radii(con->border.bottom, corner_radii_bottom(!has_corner_radius ? 0 :
-					corner_radius + border_width));
+			wlr_scene_rect_set_corner_radii(con->border.bottom, fx_corner_radii_filter(
+				corner_radii_bottom(!has_corner_radius ? 0 : corner_radius + border_width),
+				con->tile_corners));
 
 			wlr_scene_rect_set_clipped_region(con->border.bottom, (struct clipped_region) {
-				.corners = corner_radii_bottom(corner_radius),
+				.corners = fx_corner_radii_filter(corner_radii_bottom(corner_radius),
+					con->tile_corners),
 				// shift up one px to fix https://github.com/WillPower3309/swayfx/issues/386
 				// TODO: proper fix
 				.area = {
@@ -689,10 +715,8 @@ static void _arrange_container(struct sway_container *con,
 			wlr_scene_node_set_position(&con->dim_rect->node, border_left, border_top);
 			wlr_scene_rect_set_size(con->dim_rect, content_width, content_height);
 			bool has_titlebar = !title_bar || con->current.border == B_NORMAL;
-			wlr_scene_rect_set_corner_radii(
-				con->dim_rect,
-				has_titlebar ? corner_radii_bottom(con->corner_radius) : corner_radii_all(con->corner_radius)
-			);
+			wlr_scene_rect_set_corner_radii(con->dim_rect,
+				container_get_content_corners(con, con->corner_radius, has_titlebar));
 		}
 
 		// make sure to reparent, it's possible that the client just came out of
@@ -723,7 +747,7 @@ static void _arrange_container(struct sway_container *con,
 
 		arrange_children(con->current.layout, con->current.children,
 			con->current.focused_inactive_child, con->content_tree,
-			width, height, gaps);
+			width, height, gaps, con->tile_corners);
 	}
 }
 
@@ -802,6 +826,7 @@ static void arrange_fullscreen(struct wlr_scene_tree *tree,
 		struct sway_container *fs, struct sway_workspace *ws,
 		int width, int height) {
 	struct wlr_scene_node *fs_node;
+	fs->tile_corners = corner_radii_none();
 	if (fs->view) {
 		fs_node = &fs->view->scene_tree->node;
 
@@ -852,6 +877,7 @@ static void arrange_workspace_floating(struct sway_workspace *ws) {
 		wlr_scene_node_set_enabled(&floater->shadow->node, container_has_shadow(floater) && floater->view);
 		wlr_scene_node_set_enabled(&floater->border.tree->node, true);
 
+		floater->tile_corners = corner_radii_all(1);
 		arrange_container(floater, floater->current.width, floater->current.height,
 			floater->current.x, floater->current.y, true, ws->gaps_inner);
 	}
@@ -861,7 +887,7 @@ static void arrange_workspace_tiling(struct sway_workspace *ws,
 		int width, int height) {
 	arrange_children(ws->current.layout, ws->current.tiling,
 		ws->current.focused_inactive_child, ws->layers.tiling,
-		width, height, ws->gaps_inner);
+		width, height, ws->gaps_inner, corner_radii_all(1));
 }
 
 static void disable_workspace(struct sway_workspace *ws) {
