@@ -261,6 +261,8 @@ sway_cmd input_cmd_drag;
 sway_cmd input_cmd_drag_lock;
 sway_cmd input_cmd_dwt;
 sway_cmd input_cmd_dwtp;
+sway_cmd input_cmd_hires_wheel;
+sway_cmd input_cmd_hires_wheel_timeout;
 sway_cmd input_cmd_events;
 sway_cmd input_cmd_left_handed;
 sway_cmd input_cmd_map_from_region;

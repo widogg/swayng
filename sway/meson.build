@@ -166,6 +166,8 @@ sway_sources = files(
 	'commands/input/drag_lock.c',
 	'commands/input/dwt.c',
 	'commands/input/dwtp.c',
+	'commands/input/hires_wheel.c',
+	'commands/input/hires_wheel_timeout.c',
 	'commands/input/events.c',
 	'commands/input/left_handed.c',
 	'commands/input/map_from_region.c',

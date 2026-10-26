@@ -139,6 +139,15 @@ struct input_config_tool {
 	enum sway_tablet_tool_mode mode;
 };
 
+enum hires_wheel_mode {
+	HIRES_WHEEL_AUTO,
+	HIRES_WHEEL_ON,
+	HIRES_WHEEL_OFF,
+};
+
+// Idle gap that drops a partial wheel notch, in ms; matches mutter.
+#define HIRES_WHEEL_TIMEOUT_DEFAULT 150
+
 /**
  * options for input devices
  */
@@ -155,6 +164,8 @@ struct input_config {
 	int drag_lock;
 	int dwt;
 	int dwtp;
+	int hires_wheel;
+	int hires_wheel_timeout;
 	int left_handed;
 	int middle_emulation;
 	int natural_scroll;

@@ -27,6 +27,8 @@ struct input_config *new_input_config(const char* identifier) {
 	input->drag_lock = INT_MIN;
 	input->dwt = INT_MIN;
 	input->dwtp = INT_MIN;
+	input->hires_wheel = INT_MIN;
+	input->hires_wheel_timeout = INT_MIN;
 	input->send_events = INT_MIN;
 	input->click_method = INT_MIN;
 	input->clickfinger_button_map = INT_MIN;
@@ -74,6 +76,12 @@ void merge_input_config(struct input_config *dst, struct input_config *src) {
 	}
 	if (src->dwtp != INT_MIN) {
 		dst->dwtp = src->dwtp;
+	}
+	if (src->hires_wheel != INT_MIN) {
+		dst->hires_wheel = src->hires_wheel;
+	}
+	if (src->hires_wheel_timeout != INT_MIN) {
+		dst->hires_wheel_timeout = src->hires_wheel_timeout;
 	}
 	if (src->left_handed != INT_MIN) {
 		dst->left_handed = src->left_handed;

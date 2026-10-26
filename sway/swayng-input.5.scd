@@ -201,6 +201,21 @@ The following commands may only be used in the configuration file.
 	debug-events*, or as a x11 mouse button (button[1-3,8,9]). If set to
 	_disable_, it disables the scroll_method on_button_down.
 
+*input* <identifier> hires_wheel true|false|auto
+	Whether mouse bindings on buttons 4-7 fire once per physical wheel notch
+	instead of once per event. A hi-res wheel splits one notch into several
+	events, so without this a bound notch runs its command several times.
+	_auto_ (default) turns the counting on only once the device reports a
+	partial notch, leaving other devices and touchpads untouched. _true_
+	counts notches on every wheel device, _false_ restores the per-event
+	behaviour.
+
+*input* <identifier> hires_wheel_timeout <milliseconds>
+	Drops a partial wheel notch after this many milliseconds without a wheel
+	event, so a slow half-notch does not carry over into the next scroll.
+	Default is _150_; _0_ disables the reset and keeps the partial notch
+	indefinitely.
+
 *input* <identifier> scroll_button_lock enabled|disabled
 	Enables or disables scroll button lock for specified input device.
 
