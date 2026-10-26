@@ -1,5 +1,6 @@
 #include <float.h>
 #include <libevdev/libevdev.h>
+#include <limits.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_tablet_v2.h>
@@ -9,6 +10,7 @@
 #include "sway/input/cursor.h"
 #include "sway/input/seat.h"
 #include "sway/input/tablet.h"
+#include "sway/input/wheel.h"
 #include "sway/layers.h"
 #include "sway/output.h"
 #include "sway/server.h"
@@ -26,6 +28,8 @@ struct seatop_default_event {
 	uint32_t pressed_buttons[SWAY_CURSOR_PRESSED_BUTTONS_CAP];
 	size_t pressed_button_count;
 	struct gesture_tracker gestures;
+	// Partial wheel notch per axis, vertical first.
+	struct wheel_notch_counter wheel[2];
 };
 
 /*-----------------------------------------\
@@ -703,6 +707,31 @@ static uint32_t wl_axis_to_button(struct wlr_pointer_axis_event *event) {
 	}
 }
 
+/**
+ * Whether to add this event up into whole notches, remembering a device that
+ * reports fractions: "auto" leaves legacy wheels on the per-event path.
+ */
+static bool count_wheel_notches(struct input_config *ic,
+		struct sway_input_device *device,
+		struct wlr_pointer_axis_event *event) {
+	if (event->source != WL_POINTER_AXIS_SOURCE_WHEEL) {
+		return false;
+	}
+	if (device && wheel_is_hires(event->delta_discrete)) {
+		device->wheel_hires = true;
+	}
+
+	switch (ic && ic->hires_wheel != INT_MIN ?
+			ic->hires_wheel : HIRES_WHEEL_AUTO) {
+	case HIRES_WHEEL_ON:
+		return true;
+	case HIRES_WHEEL_OFF:
+		return false;
+	default:
+		return device && device->wheel_hires;
+	}
+}
+
 static void handle_pointer_axis(struct sway_seat *seat,
 		struct wlr_pointer_axis_event *event) {
 	struct sway_input_device *input_device =
@@ -738,15 +767,35 @@ static void handle_pointer_axis(struct sway_seat *seat,
 		input_device ? input_device->wlr_device : NULL;
 	char *dev_id = device ? input_device_get_identifier(device) : strdup("*");
 	uint32_t button = wl_axis_to_button(event);
+	bool count_notches = count_wheel_notches(ic, input_device, event);
+	int idle_msec = ic && ic->hires_wheel_timeout != INT_MIN ?
+		ic->hires_wheel_timeout : HIRES_WHEEL_TIMEOUT_DEFAULT;
+	struct wheel_notch_counter *counter = &e->wheel[
+		event->orientation == WL_POINTER_AXIS_HORIZONTAL_SCROLL];
 
-	// Handle mouse bindings - x11 mouse buttons 4-7 - press event
-	struct sway_binding *binding = NULL;
+	// Handle mouse bindings - x11 mouse buttons 4-7 - press and release events
 	state_add_button(e, button);
-	binding = get_active_mouse_binding(e, config->current_mode->mouse_bindings,
-			modifiers, false, on_titlebar, on_border, on_contents, on_workspace,
-			dev_id);
-	if (binding) {
-		seat_execute_command(seat, binding);
+	struct sway_binding *press_binding = get_active_mouse_binding(e,
+			config->current_mode->mouse_bindings, modifiers, false, on_titlebar,
+			on_border, on_contents, on_workspace, dev_id);
+	struct sway_binding *release_binding = get_active_mouse_binding(e,
+			config->current_mode->mouse_bindings, modifiers, true, on_titlebar,
+			on_border, on_contents, on_workspace, dev_id);
+	state_erase_button(e, button);
+
+	if (press_binding || release_binding) {
+		// Bindings count physical notches, so scroll_factor stays out of this
+		// and a partial notch still swallows the event.
+		int steps = count_notches ? wheel_notch_steps(counter,
+			event->delta_discrete, event->time_msec, idle_msec) : 1;
+		for (int i = steps < 0 ? -steps : steps; i > 0; i--) {
+			if (press_binding) {
+				seat_execute_command(seat, press_binding);
+			}
+			if (release_binding) {
+				seat_execute_command(seat, release_binding);
+			}
+		}
 		handled = true;
 	}
 
@@ -759,8 +808,13 @@ static void handle_pointer_axis(struct sway_seat *seat,
 			struct sway_node *active =
 				seat_get_active_tiling_child(seat, tabcontainer);
 			list_t *siblings = container_get_siblings(cont);
-			int desired = list_find(siblings, active->sway_container) +
-				roundf(scroll_factor * event->delta_discrete / WLR_POINTER_AXIS_DISCRETE_STEP);
+			// Per-event rounding yields 0 for hi-res fractions, so count
+			// whole notches instead; one notch moves one tab.
+			int steps = count_notches ? wheel_notch_steps(counter,
+					event->delta_discrete, event->time_msec, idle_msec) :
+				roundf(scroll_factor * event->delta_discrete /
+					WLR_POINTER_AXIS_DISCRETE_STEP);
+			int desired = list_find(siblings, active->sway_container) + steps;
 			if (desired < 0) {
 				desired = 0;
 			} else if (desired >= siblings->length) {
@@ -781,18 +835,11 @@ static void handle_pointer_axis(struct sway_seat *seat,
 		handled = true;
 	}
 
-	// Handle mouse bindings - x11 mouse buttons 4-7 - release event
-	binding = get_active_mouse_binding(e, config->current_mode->mouse_bindings,
-			modifiers, true, on_titlebar, on_border, on_contents, on_workspace,
-			dev_id);
-	state_erase_button(e, button);
-	if (binding) {
-		seat_execute_command(seat, binding);
-		handled = true;
-	}
 	free(dev_id);
 
 	if (!handled) {
+		// Plain scrolling must not pre-load the counter for a later binding.
+		counter->accum = 0;
 		wlr_seat_pointer_notify_axis(cursor->seat->wlr_seat, event->time_msec,
 			event->orientation, scroll_factor * event->delta,
 			roundf(scroll_factor * event->delta_discrete), event->source,

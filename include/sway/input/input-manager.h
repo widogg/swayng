@@ -16,6 +16,8 @@ struct sway_input_device {
 	struct wl_list link;
 	struct wl_listener device_destroy;
 	bool is_virtual;
+	// Set once this device reports a fraction of a wheel notch.
+	bool wheel_hires;
 };
 
 struct sway_input_manager {

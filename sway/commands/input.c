@@ -17,6 +17,8 @@ static const struct cmd_handler input_handlers[] = {
 	{ "dwt", input_cmd_dwt },
 	{ "dwtp", input_cmd_dwtp },
 	{ "events", input_cmd_events },
+	{ "hires_wheel", input_cmd_hires_wheel },
+	{ "hires_wheel_timeout", input_cmd_hires_wheel_timeout },
 	{ "left_handed", input_cmd_left_handed },
 	{ "map_from_region", input_cmd_map_from_region },
 	{ "map_to_output", input_cmd_map_to_output },

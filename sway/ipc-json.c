@@ -2,6 +2,7 @@
 #include <float.h>
 #include <json.h>
 #include <libevdev/libevdev.h>
+#include <limits.h>
 #include <stdio.h>
 #include <wlr/config.h>
 #include <wlr/types/wlr_content_type_v1.h>
@@ -1277,6 +1278,18 @@ json_object *ipc_json_describe_input(struct sway_input_device *device) {
 		}
 		json_object_object_add(object, "scroll_factor",
 				json_object_new_double(scroll_factor));
+
+		int hires_wheel = ic != NULL && ic->hires_wheel != INT_MIN ?
+			ic->hires_wheel : HIRES_WHEEL_AUTO;
+		json_object_object_add(object, "hires_wheel",
+				json_object_new_string(hires_wheel == HIRES_WHEEL_ON ? "true" :
+					hires_wheel == HIRES_WHEEL_OFF ? "false" : "auto"));
+		json_object_object_add(object, "hires_wheel_detected",
+				json_object_new_boolean(device->wheel_hires));
+		json_object_object_add(object, "hires_wheel_timeout",
+				json_object_new_int(ic != NULL &&
+					ic->hires_wheel_timeout != INT_MIN ?
+					ic->hires_wheel_timeout : HIRES_WHEEL_TIMEOUT_DEFAULT));
 	}
 
 #if WLR_HAS_LIBINPUT_BACKEND
